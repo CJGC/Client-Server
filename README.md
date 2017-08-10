@@ -1,2 +1,2 @@
 # Client-Server
-This repository will contain client-server course's porjects
+This repository will contain client-server projects
