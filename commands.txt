@@ -1,1 +1,2 @@
-sudo apt-get install dir2ogg
+sudo apt-get install dir2ogg -> converter to .ogg file
+sudo apt-get install libsfml-dev -> to install sfml library in linux
