@@ -1,9 +1,9 @@
 #include <iostream>
-//#include <string>
+#include <string>
 #include <zmqpp/zmqpp.hpp>
 
 int main(int argc, char** argv) {
-	if (argc != 4) {
+	if (argc != 4){
 		std::cerr << "Should be called: " << argv[0] << " <op> operand1 operand2\n";
 		return 1;
 	}
