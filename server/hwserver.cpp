@@ -1,41 +1,47 @@
 #include <zmqpp/zmqpp.hpp>
-#include <iostream>
-#include <vector>
-#include <string>
-#include <cassert>
 #include "header.h"
 
-void listen(zmqpp::socket &s){
-  while(true) {
-    zmqpp::message requestPack, response;
-    std::string operation;
-    int operand1, operand2, answer = 0;
-    s.receive(requestPack);
-
-    /* each message has three parts: <operation|operand1|operand2> */
-    assert(requestPack.parts() == 3);
-
-    requestPack >> operation >> operand1 >> operand2;
-    std::cout << "Working on " << operation << std::endl;
-    if(operation == "add") answer = operand1 + operand2;
-    else if(operation == "sub") answer = operand1 - operand2;
-    else std::cout << "Invalid operation requested!!\n";
-
-    /* replying to client */
-    std::cout << "Sending response  " << answer << std::endl;
-    response << answer;
-    s.send(response);
+void listen(zmqpp::socket& s,std::string& songsPackage,std::unordered_map<std::string,std::vector<char>>& songs){
+  while(true){
+    zmqpp::message clientRequest, reply;
+    std::string op, songName;
+    s.receive(clientRequest);
+    assert(clientRequest.parts() == 2);
+    clientRequest >> op >> songName;
+    if(op == "list") reply << songsPackage;
+    else if(op == "play")
+      if(songs.find(songName) != songs.end()) reply.add_raw(songs[songName].data(), songs[songName].size());
+      else reply << "Desired song could not be found!";
+    else reply << "Invalid operation requested!\n";
+    s.send(reply);
   }
 }
 
-int main() {
+int main(int argc,const char *argv[]){
+  if(argc != 2){
+    std::cerr <<"There should be two arguments: <"<< argv[0]<<"> <dir path/>\n";
+    return -1;
+  }
+  std::string path = argv[1];
+
   /* making socket and contex */
   zmqpp::context ctx;
   zmqpp::socket s(ctx, zmqpp::socket_type::rep);
 
-  /* storing files names with desired format */
-  std::vector<const char *> files;
-  getFiles(files,".cpp");
+  /* getting songs filename */
+  std::vector<std::string> files;
+  if(getFiles(files,".ogg",path.c_str()) != 0){
+    std::cerr<<"Was not possible open <"<<path<<">!";
+    return -1;
+  }
+
+  /* building songs package + unordered_map that will contain songs */
+  std::string songsPackage("");
+  std::unordered_map<std::string,std::vector<char>> songs;
+  for(std::string song:files){
+    songsPackage+=song+"\n";
+    songs[song] = readFileToBytes(path+song);
+  }
 
   /* binding socket with given tcp port */
   std::cout << "Binding socket to tcp port 5555\n";
@@ -43,6 +49,6 @@ int main() {
   std::cout << "Start serving requests!\n";
 
   /* listening client's requests */
-  listen(s);
+  listen(s,songsPackage,songs);
   return 0;
 }
