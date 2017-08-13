@@ -4,42 +4,47 @@
 #include <SFML/Audio.hpp>
 
 int main(int argc, char** argv) {
-	if (argc != 2){
-		std::cerr << "Must be called: " << argv[0] << " file.ogg\n";
+	/* Making some  and initialization */
+	if(!(argc >= 2 && argc <= 3)){
+		std::cerr<<"Must be called: <"<< argv[0] <<"> <list>\n";
+		std::cerr<<"or <"<<argv[0]<<"> <play> <file.ogg>\n";
 		return 1;
 	}
+	std::string op(argv[1]), songName("none"), result;
+	if(argc == 3)	songName = argv[2];
 
 	/* making socket and contex */
-	// zmqpp::context ctx;
-	// zmqpp::socket s(ctx, zmqpp::socket_type::req);
+	zmqpp::context ctx;
+	zmqpp::socket s(ctx, zmqpp::socket_type::req);
 
 	/* binding socket with given tcp port */
-	// std::cout << "Connecting to tcp port 5555\n";
-	// s.connect("tcp://localhost:5555");
+	zmqpp::message m, answer;
 
-	std::cout<<"Simple player! \n";
-	std::string fileToPlay(argv[1]);
+	/* interacting with server */
+	s.connect("tcp://localhost:5555");
+	m << op << songName;
+	s.send(m);
+	s.receive(answer);
 
-	sf::Music music;
-
-	if(!music.openFromFile(fileToPlay)){
-		std::cerr <<"File not found or error:";
-		return 1;
+	/* processing server reply */
+	if(op == "play"){
+		// std::string fileToPlay(argv[1]);
+		// sf::Music music;
+		// if(!music.openFromFile(fileToPlay)){
+		// 	std::cerr <<"File not found or error:";
+		// 	return 1;
+		// }
+		//
+		// music.play();
+		std::string exit("no");
+		while(exit != "y"){
+			std::cout<<"do you want to exit? (y)";
+			std::getline(std::cin,exit);
+		}
+		// music.stop();
+		return 0;
 	}
-
-	music.play();
-	/* sending message to server */
-	// std::cout << "Sending  some work!\n";
-	// zmqpp::message m;
-
-	// s.send(m);
-
-	/* capturing and showing server reply */
-	// zmqpp::message answer;
-	// int a;
-	// s.receive(answer);
-	// answer >> a;
-	// std::cout << "Answer is " << a << std::endl;
-  std::cout << "Finished\n";
+	answer >> result;
+	std::cout << result;
 	return 0;
 }
