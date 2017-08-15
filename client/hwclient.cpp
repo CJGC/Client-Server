@@ -2,6 +2,7 @@
 #include <string>
 #include <zmqpp/zmqpp.hpp>
 #include <SFML/Audio.hpp>
+#include <fstream>
 
 int main(int argc, char** argv) {
 	/* Making some  and initialization */
@@ -25,17 +26,22 @@ int main(int argc, char** argv) {
 	m << op << songName;
 	s.send(m);
 	s.receive(answer);
-
+	// openfrommemory
 	/* processing server reply */
 	if(op == "play"){
-		// std::string fileToPlay(argv[1]);
-		// sf::Music music;
-		// if(!music.openFromFile(fileToPlay)){
-		// 	std::cerr <<"File not found or error:";
-		// 	return 1;
-		// }
-		//
-		// music.play();
+		const void *data;
+		answer.get(&data,0);
+		size_t size = answer.size(0);
+		std::cout<<size;
+		std::ofstream ofs(songName, std::ios::binary);
+		ofs.write((char*)data, size);
+		ofs.close();
+		sf::Music music;
+		if(!music.openFromFile(songName)){
+			std::cerr <<"File not found or error:";
+			return 1;
+		}
+		music.play();
 		std::string exit("no");
 		while(exit != "y"){
 			std::cout<<"do you want to exit? (y)";
