@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <cassert>
+#include <cmath>
 #include <unordered_map>
 
 int getFiles(std::vector<std::string> &v,const char *format,const char *directory="") {
@@ -30,4 +31,11 @@ std::vector<char> readFileToBytes(const std::string& fileName){
 	ifs.seekg(0, std::ios::beg);
 	ifs.read(result.data(), pos);
 	return result;
+}
+
+std::vector<char> getPackage(std::vector<char> &v,size_t &i,int limit,size_t &counter){
+  std::vector<char> package(limit);
+  size_t sizeV = v.size();
+  for(i,counter = 0;i < sizeV && counter != limit;i++,counter++) package[counter] = v[i];
+  return package;
 }
