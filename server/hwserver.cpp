@@ -2,15 +2,43 @@
 #include "header.h"
 
 void listen(zmqpp::socket& s,std::string& songsPackage,std::unordered_map<std::string,std::vector<char>>& songs){
+  std::unordered_map<std::string,std::vector<size_t>> clients;
+  size_t sizePackage=0, i=0, songParts=0;
+  zmqpp::message clientRequest, reply;
+  std::string id, op, songName, clientKey;
+  std::vector<char> package;
   while(true){
-    zmqpp::message clientRequest, reply;
-    std::string op, songName;
     s.receive(clientRequest);
-    assert(clientRequest.parts() == 2);
-    clientRequest >> op >> songName;
+    // assert(clientRequest.parts() == 3);
+    clientRequest >> id >> op >> songName;
     if(op == "list") reply << songsPackage;
     else if(op == "play")
-      if(songs.find(songName) != songs.end()) reply.add_raw(songs[songName].data(), songs[songName].size());
+      if(songs.find(songName) != songs.end()){
+        clientKey = id + " " + songName;
+        if(clients.find(clientKey) != clients.end()){ //client exist
+          i = clients[clientKey].at(0);
+          songParts = clients[clientKey].at(1);
+          package = getPackage(songs[songName],i,512000,sizePackage);
+          songParts--;
+          reply << songParts;
+          reply.add_raw(package.data(),sizePackage);
+          if(songParts != 0){clients[clientKey].at(0) = i; clients[clientKey].at(1) = songParts;}
+          else clients.erase(clientKey);
+        }
+        else{ // client doesn't exist
+          double parts = songs[songName].size() / 512000;
+          i=0;
+          songParts = std::ceil(parts);
+          package = getPackage(songs[songName],i,512000,sizePackage);
+          if(songParts > 1){
+            songParts--;
+            std::vector<size_t> clientInfo(i,songParts);
+            clients[clientKey] = clientInfo;
+          }
+          reply << songParts;
+          reply.add_raw(package.data(),sizePackage);
+        }
+      }
       else reply << "Desired song could not be found!";
     else reply << "Invalid operation requested!\n";
     s.send(reply);
