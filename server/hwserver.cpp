@@ -5,35 +5,36 @@ void listen(zmqpp::socket& s,std::string& songsPackage,std::unordered_map<std::s
   std::unordered_map<std::string,std::vector<size_t>> clients;
   size_t sizePackage=0, i=0, songParts=0;
   zmqpp::message clientRequest, reply;
-  std::string id, op, songName, clientKey;
-  std::vector<char> package;
+  std::string id, op, songName;
+  //std::vector<char> package;
   while(true){
     s.receive(clientRequest);
-    // assert(clientRequest.parts() == 3);
+    // std::cout<< clientRequest.parts();
+    assert(clientRequest.parts() == 3);
     clientRequest >> id >> op >> songName;
     if(op == "list") reply << songsPackage;
     else if(op == "play")
       if(songs.find(songName) != songs.end()){
-        clientKey = id + " " + songName;
-        if(clients.find(clientKey) != clients.end()){ //client exist
-          i = clients[clientKey].at(0);
-          songParts = clients[clientKey].at(1);
-          package = getPackage(songs[songName],i,512000,sizePackage);
+        if(clients.find(id) != clients.end()){ //client exist
+          i = clients[id].at(0);
+          songParts = clients[id].at(1);
+          std::vector<char> package = getPackage(songs[songName],i,512000,sizePackage);
+          std::cout<<sizePackage<<"\n";
           songParts--;
           reply << songParts;
           reply.add_raw(package.data(),sizePackage);
-          if(songParts != 0){clients[clientKey].at(0) = i; clients[clientKey].at(1) = songParts;}
-          else clients.erase(clientKey);
+          if(songParts != 0){clients[id].at(0) = i; clients[id].at(1) = songParts;}
+          else clients.erase(id);
         }
         else{ // client doesn't exist
-          double parts = songs[songName].size() / 512000;
+          double parts = double(songs[songName].size()) / double(512000);
           i=0;
           songParts = std::ceil(parts);
-          package = getPackage(songs[songName],i,512000,sizePackage);
+          std::vector<char> package = getPackage(songs[songName],i,512000,sizePackage);
           if(songParts > 1){
             songParts--;
-            std::vector<size_t> clientInfo(i,songParts);
-            clients[clientKey] = clientInfo;
+            std::vector<size_t> clientInfo(2); clientInfo.at(0) = i; clientInfo.at(1) = songParts;
+            clients[id] = clientInfo;
           }
           reply << songParts;
           reply.add_raw(package.data(),sizePackage);
@@ -75,7 +76,6 @@ int main(int argc,const char *argv[]){
   std::cout << "Binding socket to tcp port 5555\n";
   s.bind("tcp://*:5555");
   std::cout << "Start serving requests!\n";
-
   /* listening client's requests */
   listen(s,songsPackage,songs);
   return 0;
