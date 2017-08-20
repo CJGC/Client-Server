@@ -8,10 +8,13 @@
 #include <mutex>
 #include <condition_variable>
 #include <string>
+#include <cstdlib>
 
 using namespace std;
 using namespace zmqpp;
 using namespace sf;
+
+list<string> userList;
 
 void getPart(socket& s,string songName,unsigned int part,ofstream &ofs){
 	message request,answer;
@@ -36,47 +39,68 @@ void getSong(socket &s,string& songName){
 	ofs.close();
 }
 
-void getList(socket &s,string& op){
+string getList(socket &s){
 	message request,answer;
 	string list;
-	request << op << "none" << 0;
+	request << "list" << "none" << 0;
 	s.send(request);
 	s.receive(answer);
 	answer >> list;
-	cout << list;
+	return list;
+}
+
+string menu(string title,string content,vector<string>& optionsSet,string& op){
+	string screen(""), option(""), stick("|"), space(" "), endLine("\n");
+	string line("--------------------------------------------------------------------------------");
+	size_t titleSize = title.size(), screenSize = line.size();
+	size_t spaces = screenSize - titleSize - 2;
+	screen += line+endLine+stick;
+	for(size_t p=1; p<=spaces+1; p++)
+		if(p == spaces/2) screen += title;
+		else screen += space;
+	screen += stick+endLine+line+content+endLine+line+endLine+endLine+"<Available operators>"+endLine;
+	for(auto &opt : optionsSet) screen += "->"+opt+endLine;
+	screen += endLine+"Type option: ";
+	cout << screen;
+	getline(cin, option);
+	for(auto opt : optionsSet) if(option.find(opt,0) != string::npos){op = opt; return option;}
+	return "";
+}
+
+bool intoList(string& musicList,string& songName){
+	if(musicList.find(songName,0) != string::npos) return true;
+	return false;
 }
 
 int main(int argc, char **argv) {
-	/* Making some  and initialization */
-	if (!(argc >= 2 && argc <= 3)) {
-	  cerr << "Must be called: <" << argv[0] << "> <list>\n";
-	  cerr << "or <" << argv[0] << "> <play> <file.ogg>\n";
-	  return 1;
-	}
-	string op(argv[1]), songName("none"), id("client1");
-	if (argc == 3) songName = argv[2];
-
-	/* making socket and contex */
+	/* establishing connection */
 	context ctx;
 	socket s(ctx, socket_type::req);
-	/* binding socket with given tcp port */
 	s.connect("tcp://localhost:5555");
 
-	/* interacting with server */
-	if(op == "list") getList(s,op);
-	else if(op == "play"){
-		getSong(s,songName);
-	  Music music;
-		if(!music.openFromFile(songName)){
-			std::cerr << "There was an error opening requested song!" << '\n';
-			return -1;
+	/* interacting with user */
+	bool exit = false;
+	int menuNum = 1;
+	string musicList = getList(s);
+	do{
+		system("clear");
+		switch(menuNum){
+			case 1:{ // available songs menu
+				vector<string> optionsSet{"get","goto playlist"};
+				string op(""), object(""), userOpt("");
+				userOpt = menu("AVAILABLE SONGS MENU",musicList,optionsSet,op);
+				cout << userOpt;
+				if(userOpt == ""){ continue;}
+				short int secondPartPos = userOpt.rfind(" ",userOpt.size()) + 1;
+				if(secondPartPos)	object = userOpt.substr(secondPartPos,userOpt.size());
+				if(object == ""){ continue;}
+				if(object == "playlist"){menuNum = 2; continue;}
+				if(op == "get" && intoList(musicList,object)) getSong(s,object);
+			} break;
+		 	case 2:{ // playlist menu
+				exit = true;
+			} break;
 		}
-	  music.play();
-		string exit("");
-		while(exit != "y"){
-			cout<<"do you want to exit? (y): ";
-			cin>>exit;
-		}
-	}
+	}while(!exit);
 	return 0;
 }
