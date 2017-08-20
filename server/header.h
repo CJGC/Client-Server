@@ -8,9 +8,12 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <unordered_map>
 
-int getFiles(std::vector<std::string> &v,const char *format,const char *directory="") {
+using namespace std;
+
+int getFiles(vector<string> &v,const char *format,const char *directory="") {
   DIR *dir; // pointer that will contain current directory addr
   struct dirent *file; // pointer that will contain each file from current directory
   char currentDir[FILENAME_MAX]; // currentDir will store current directory path
@@ -24,18 +27,27 @@ int getFiles(std::vector<std::string> &v,const char *format,const char *director
   return 0;
 }
 
-std::vector<char> readFileToBytes(const std::string& fileName){
-	std::ifstream ifs(fileName, std::ios::binary | std::ios::ate);
-	std::ifstream::pos_type pos = ifs.tellg();
-	std::vector<char> result(pos);
-	ifs.seekg(0, std::ios::beg);
-	ifs.read(result.data(), pos);
-	return result;
+vector<char> getPackage(string& musPath,string& songName,size_t limit,unsigned int part,size_t &bits){
+  string dir = musPath+songName;
+  ifstream ifs(dir,ios::binary | ios::ate);
+  ifstream::pos_type songSize = ifs.tellg();
+  size_t size = (size_t)songSize;
+  size_t leftoverPart = size - (part-1)*limit;
+  if(leftoverPart >= limit) bits = limit;
+  else bits = leftoverPart;
+  ifs.seekg((part-1)*limit,ios::beg);
+  vector<char> package(bits);
+  ifs.read(package.data(),bits);
+  ifs.close();
+  return package;
 }
 
-std::vector<char> getPackage(std::vector<char> &v,size_t &i,int limit,size_t &counter){
-  std::vector<char> package(limit);
-  size_t sizeV = v.size();
-  for(i,counter = 0;i < sizeV && counter != limit;i++,counter++) package[counter] = v[i];
-  return package;
+size_t meetParts(string& musPath,string& songName,size_t limit){
+  string dir = musPath+songName;
+  ifstream ifs(dir, ios::binary | ios::ate);
+  ifstream::pos_type songSize = ifs.tellg();
+  ifs.close();
+  size_t size = (size_t)songSize;
+  size_t parts = ceil((double)size/limit);
+  return parts;
 }
