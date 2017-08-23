@@ -15,7 +15,7 @@ using namespace zmqpp;
 using namespace sf;
 
 list<string> userList;
-list<string>::iterator currentSongIndex= userList.begin();
+list<string>::iterator currentSongItera= userList.begin();
 Music music;
 mutex autPlay;
 condition_variable cv;
@@ -82,7 +82,7 @@ void makeLine(string& item,string& screen,const size_t& screenSize,size_t rule){
 	screen += "|\n";
 }
 
-string menu(string title,list<string>& content,vector<string>& availOpts,string& op){
+string menu(string title,list<string>& content,list<string>& availOpts,string& op){
 	string screen(""), option("");
 	string line("--------------------------------------------------------------------------------");
 	const size_t screenSize = line.size();
@@ -105,10 +105,13 @@ bool intoServerList(list<string>& serverMusicList,string& songName){
 	return false;
 }
 
-list<string>::iterator intoUserList(string& songName){
-	list<string>::iterator i;
-	i = find(userList.begin(),userList.end(),songName);
-	return i;
+bool intoUserList(string& songName){
+	if(find(userList.begin(),userList.end(),songName) != userList.end()) return true;
+	return false;
+}
+
+list<string>::iterator getIterator(string& songName){
+	return find(userList.begin(),userList.end(),songName);
 }
 
 int main(int argc, char **argv) {
@@ -127,54 +130,53 @@ int main(int argc, char **argv) {
 		system("clear");
 		switch(menuNum){
 			case 1:{ // Available songs menu
-				vector<string> availOpts{"add","goto playlist"};
-				string op(""), secondPart(""), userOpt("");
+				list<string> availOpts{"add","goto playlist"};
+				string op(""), userOpt("");
 				userOpt = menu("AVAILABLE SONGS MENU",serverMusicList,availOpts,op);
 				if(userOpt == "") continue;
 				if(userOpt == "goto playlist"){menuNum = 2; continue;}
-				short int secondPartPos = userOpt.rfind(" ",userOpt.size()) + 1;
-				if(secondPartPos)	secondPart = userOpt.substr(secondPartPos,userOpt.size());
-				if(secondPart == "") continue;
-				if(op == "add" && intoServerList(serverMusicList,secondPart)){
-					if(intoUserList(secondPart) != userList.end()) continue;
-					getSong(s,secondPart);
-					userList.push_back(secondPart);
+				string songName("");
+				int pos = userOpt.rfind(" ",userOpt.size()) + 1;
+				if(pos)	songName = userOpt.substr(pos,userOpt.size());
+				if(songName == "") continue;
+				if(op == "add" && intoServerList(serverMusicList,songName) and !intoUserList(songName)){
+					getSong(s,songName);
+					userList.push_back(songName);
 				}
 			} break;
 		 	case 2:{ // Playlist user menu
-				vector<string> availOpts{"play","stop","next","remove","goto songs menu"};
-				string op(""), songName(""), userOpt("");
+				list<string> availOpts{"play","stop","next","remove","goto songs menu"};
+				string op(""), userOpt("");
 				userOpt = menu("PLAY LIST MENU",userList,availOpts,op);
 				if(userOpt == "") continue;
 				if(userOpt == "stop"){music.stop();continue;}
 				if(userOpt == "goto songs menu"){menuNum = 1; continue;}
 				if(userOpt == "next" && !userList.empty()){
-					advance(currentSongIndex,1);
-					if(currentSongIndex == userList.end()) currentSongIndex=userList.begin();
-					music.openFromFile(*currentSongIndex);
+					advance(currentSongItera,1);
+					if(currentSongItera == userList.end()) currentSongItera=userList.begin();
+					music.openFromFile(*currentSongItera);
 					music.play();
 					continue;
 				}
+				string songName("");
 				int pos = userOpt.rfind(" ",userOpt.size()-1) + 1;
 				if(pos) songName = userOpt.substr(pos,userOpt.size()-1);
-				if(songName == "") continue;
-				if(op == "play" && !userList.empty()){
-					list<string>::iterator i = intoUserList(songName);
-					if(i != userList.end()) currentSongIndex = i;
-					else continue;
-					music.openFromFile(*currentSongIndex);
-					musicIsPlaying = true;
-					cv.notify_one();
+				if(songName == "" || !intoUserList(songName)) continue;
+				if(op == "play"){
+					currentSongItera = getIterator(songName);
+					music.openFromFile(*currentSongItera);
 					music.play();
-					continue;
 				}
-				if(op == "remove"){
-					if(currentSongIndex == intoUserList(songName)){currentSongIndex = userList.begin(); music.stop();}
+				else if(op == "remove"){
+					list<string>::iterator iter = getIterator(songName);
+					int i = distance(userList.begin(),iter);
+					int j = distance(userList.begin(),currentSongItera);
 					userList.remove(songName);
+					if(i == j){currentSongItera = userList.begin(); music.stop();}
+					else if(j > i) advance(currentSongItera,-1);
 				}
 			} break;
 		}
 	}while(!exit);
-	system("rm *.ogg");
 	return 0;
 }
