@@ -15,6 +15,22 @@ using namespace zmqpp;
 using namespace sf;
 
 list<string> userList;
+list<string>::iterator currentSongIndex= userList.begin();
+Music music;
+mutex autPlay;
+condition_variable cv;
+bool stoppedByUser = false, musicIsPlaying = false;
+
+// void autoPlay(){
+// 	while(true){
+// 		unique_lock<mutex> lock(autPlay);
+// 		cv.wait(lock,[]{return musicIsPlaying;});
+// 		Time MusicDuration = music.getDuration();
+// 		// cv.wait_for(lock,MusicDuration,[]{return stoppedByUser == true;});
+// 		if(stoppedByUser) cout << "stopped by user";
+// 		else cout << "songs ended";
+// 	}
+// }
 
 void getPart(socket& s,string songName,unsigned int part,ofstream &ofs){
 	message request,answer;
@@ -39,37 +55,60 @@ void getSong(socket &s,string& songName){
 	ofs.close();
 }
 
-string getList(socket &s){
+list<string> processList(string& sList){
+	list<string> songsList; string songName("");
+	for(auto c : sList){
+		if(c == '\n'){songsList.push_back(songName); songName = "";}
+		else songName += c;
+	}
+	return songsList;
+}
+
+list<string> getList(socket &s){
 	message request,answer;
-	string list;
+	string sList;
 	request << "list" << "none" << 0;
 	s.send(request);
 	s.receive(answer);
-	answer >> list;
-	return list;
+	answer >> sList;
+	return processList(sList);
 }
 
-string menu(string title,string content,vector<string>& optionsSet,string& op){
-	string screen(""), option(""), stick("|"), space(" "), endLine("\n");
+void makeLine(string& item,string& screen,const size_t& screenSize,size_t rule){
+	size_t spaces = screenSize - item.size() - 2, makeRule = 0;
+	if(rule == 1) makeRule = spaces/2;
+	if(rule == 2) makeRule = 7;
+	for(size_t p=1; p<=spaces+1; p++)	if(p == makeRule) screen += item; else screen += " ";
+	screen += "|\n";
+}
+
+string menu(string title,list<string>& content,vector<string>& availOpts,string& op){
+	string screen(""), option("");
 	string line("--------------------------------------------------------------------------------");
-	size_t titleSize = title.size(), screenSize = line.size();
-	size_t spaces = screenSize - titleSize - 2;
-	screen += line+endLine+stick;
-	for(size_t p=1; p<=spaces+1; p++)
-		if(p == spaces/2) screen += title;
-		else screen += space;
-	screen += stick+endLine+line+content+endLine+line+endLine+endLine+"<Available operators>"+endLine;
-	for(auto &opt : optionsSet) screen += "->"+opt+endLine;
-	screen += endLine+"Type option: ";
+	const size_t screenSize = line.size();
+	screen += line+"\n|";
+	makeLine(title,screen,screenSize,1);
+	screen += line+"\n";
+	for(auto &item : content){ screen += "|"; makeLine(item,screen,screenSize,2);}
+	screen += line+"\n\n** <Available operators> **\n";
+	for(auto &opt : availOpts) screen += " -> "+opt+"\n";
+	screen += "\nType option: ";
 	cout << screen;
 	getline(cin, option);
-	for(auto opt : optionsSet) if(option.find(opt,0) != string::npos){op = opt; return option;}
+	for(auto opt : availOpts) if(option.find(opt,0) != string::npos){op = opt; return option;}
 	return "";
 }
 
-bool intoList(string& musicList,string& songName){
-	if(musicList.find(songName,0) != string::npos) return true;
+bool intoServerList(list<string>& serverMusicList,string& songName){
+	if(find(serverMusicList.begin(),serverMusicList.end(),songName) != serverMusicList.end())
+		return true;
 	return false;
+}
+
+list<string>::iterator intoUserList(string& songName){
+	list<string>::iterator i;
+	i = find(userList.begin(),userList.end(),songName);
+	return i;
 }
 
 int main(int argc, char **argv) {
@@ -77,30 +116,65 @@ int main(int argc, char **argv) {
 	context ctx;
 	socket s(ctx, socket_type::req);
 	s.connect("tcp://localhost:5555");
+	// thread t(autoPlay);
 
 	/* interacting with user */
 	bool exit = false;
 	int menuNum = 1;
-	string musicList = getList(s);
+	list<string> serverMusicList = getList(s);
+	// this_thread::sleep_for(std::chrono::milliseconds(200));
 	do{
 		system("clear");
 		switch(menuNum){
-			case 1:{ // available songs menu
-				vector<string> optionsSet{"get","goto playlist"};
-				string op(""), object(""), userOpt("");
-				userOpt = menu("AVAILABLE SONGS MENU",musicList,optionsSet,op);
-				cout << userOpt;
-				if(userOpt == ""){ continue;}
+			case 1:{ // Available songs menu
+				vector<string> availOpts{"add","goto playlist"};
+				string op(""), secondPart(""), userOpt("");
+				userOpt = menu("AVAILABLE SONGS MENU",serverMusicList,availOpts,op);
+				if(userOpt == "") continue;
+				if(userOpt == "goto playlist"){menuNum = 2; continue;}
 				short int secondPartPos = userOpt.rfind(" ",userOpt.size()) + 1;
-				if(secondPartPos)	object = userOpt.substr(secondPartPos,userOpt.size());
-				if(object == ""){ continue;}
-				if(object == "playlist"){menuNum = 2; continue;}
-				if(op == "get" && intoList(musicList,object)) getSong(s,object);
+				if(secondPartPos)	secondPart = userOpt.substr(secondPartPos,userOpt.size());
+				if(secondPart == "") continue;
+				if(op == "add" && intoServerList(serverMusicList,secondPart)){
+					if(intoUserList(secondPart) != userList.end()) continue;
+					getSong(s,secondPart);
+					userList.push_back(secondPart);
+				}
 			} break;
-		 	case 2:{ // playlist menu
-				exit = true;
+		 	case 2:{ // Playlist user menu
+				vector<string> availOpts{"play","stop","next","remove","goto songs menu"};
+				string op(""), songName(""), userOpt("");
+				userOpt = menu("PLAY LIST MENU",userList,availOpts,op);
+				if(userOpt == "") continue;
+				if(userOpt == "stop"){music.stop();continue;}
+				if(userOpt == "goto songs menu"){menuNum = 1; continue;}
+				if(userOpt == "next" && !userList.empty()){
+					advance(currentSongIndex,1);
+					if(currentSongIndex == userList.end()) currentSongIndex=userList.begin();
+					music.openFromFile(*currentSongIndex);
+					music.play();
+					continue;
+				}
+				int pos = userOpt.rfind(" ",userOpt.size()-1) + 1;
+				if(pos) songName = userOpt.substr(pos,userOpt.size()-1);
+				if(songName == "") continue;
+				if(op == "play" && !userList.empty()){
+					list<string>::iterator i = intoUserList(songName);
+					if(i != userList.end()) currentSongIndex = i;
+					else continue;
+					music.openFromFile(*currentSongIndex);
+					musicIsPlaying = true;
+					cv.notify_one();
+					music.play();
+					continue;
+				}
+				if(op == "remove"){
+					if(currentSongIndex == intoUserList(songName)){currentSongIndex = userList.begin(); music.stop();}
+					userList.remove(songName);
+				}
 			} break;
 		}
 	}while(!exit);
+	system("rm *.ogg");
 	return 0;
 }
