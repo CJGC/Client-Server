@@ -122,7 +122,6 @@ void common(list<string>& content,list<string>& availOpts,string title,string& f
 		if(fpos > 0) fpart = userOpt.substr(0,fpos);
 		int lpos = userOpt.rfind(" ",userOpt.size()-1)+1;
 		if(lpos) lpart = userOpt.substr(lpos,userOpt.size()-1);
-		cout << fpart << " " << lpart;
 	}while(fpart == "" && lpart == "");
 }
 
