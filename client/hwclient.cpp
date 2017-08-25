@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 					userList.push_back(songName);
 				}
 			}break;
-		 	case 2:{ // playlist user menu
+		 	case 2:{ // user's playlist menu
 				list<string> availOpts{"play","remove","stop song","next song","goto store"};
 				string fpart(""), lpart("");
 				common(userList,availOpts,"PLAYLIST MENU",fpart,lpart);
