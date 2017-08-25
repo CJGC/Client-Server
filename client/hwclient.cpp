@@ -159,6 +159,7 @@ int main(int argc, char **argv) {
 					music.openFromFile(*currentSongItera);
 					music.play();
 					isPlayedByUser = true;
+					cv.notify_one();
 					continue;
 				}
 				string songName = lpart;
