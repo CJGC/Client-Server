@@ -99,14 +99,8 @@ string menu(string title,list<string>& content,list<string>& availOpts){
 	return "";
 }
 
-bool intoServerList(list<string>& serverMusicList,string& songName){
-	if(find(serverMusicList.begin(),serverMusicList.end(),songName) != serverMusicList.end())
-		return true;
-	return false;
-}
-
-bool intoUserList(string& songName){
-	if(find(userList.begin(),userList.end(),songName) != userList.end()) return true;
+bool intoList(list<string>& _list,string& songName){
+	if(find(_list.begin(),_list.end(),songName) != _list.end()) return true;
 	return false;
 }
 
@@ -145,7 +139,7 @@ int main(int argc, char **argv) {
 				common(serverMusicList,availOpts,"AVAILABLE SONGS MENU",fpart,lpart);
 				if(fpart == "goto" && lpart == "playlist"){menuNum = 2; continue;}
 				string songName = lpart;
-				if(fpart == "add" && intoServerList(serverMusicList,songName) && !intoUserList(songName)){
+				if(fpart == "add" && intoList(serverMusicList,songName) && !intoList(userList,songName)){
 					getSong(s,songName);
 					userList.push_back(songName);
 				}
@@ -164,7 +158,7 @@ int main(int argc, char **argv) {
 					continue;
 				}
 				string songName = lpart;
-				if(!intoUserList(songName)) continue;
+				if(!intoList(userList,songName)) continue;
 				if(fpart == "play"){
 					currentSongItera = getIterator(songName);
 					music.openFromFile(*currentSongItera);
