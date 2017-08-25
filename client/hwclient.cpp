@@ -152,14 +152,10 @@ int main(int argc, char **argv) {
 				if(fpart == "goto" && lpart == "store"){menuNum = 1; continue;}
 				if(fpart == "stop" && lpart == "song"){isPlayedByUser = false; music.stop();continue;}
 				if(fpart == "next" && lpart == "song" && !userList.empty() && isPlayedByUser){
-					isPlayedByUser = false;
-					music.stop();
 					advance(currentSongItera,1);
 					if(currentSongItera == userList.end()) currentSongItera=userList.begin();
 					music.openFromFile(*currentSongItera);
 					music.play();
-					isPlayedByUser = true;
-					cv.notify_one();
 					continue;
 				}
 				string songName = lpart;
