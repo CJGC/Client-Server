@@ -19,18 +19,20 @@ list<string>::iterator currentSongItera= userList.begin();
 Music music;
 mutex autPlay;
 condition_variable cv;
-bool stoppedByUser = false, musicIsPlaying = false;
+bool isPlayedByUser = false;
 
-// void autoPlay(){
-// 	while(true){
-// 		unique_lock<mutex> lock(autPlay);
-// 		cv.wait(lock,[]{return musicIsPlaying;});
-// 		Time MusicDuration = music.getDuration();
-// 		// cv.wait_for(lock,MusicDuration,[]{return stoppedByUser == true;});
-// 		if(stoppedByUser) cout << "stopped by user";
-// 		else cout << "songs ended";
-// 	}
-// }
+void autoPlay(){
+	while(true){
+		unique_lock<mutex> lock(autPlay);
+		cv.wait(lock,[]{return isPlayedByUser;});
+		while(music.getStatus() == SoundSource::Playing) this_thread::sleep_for(chrono::milliseconds(200));
+		if(!isPlayedByUser) continue;
+		advance(currentSongItera,1);
+		if(currentSongItera == userList.end()) currentSongItera = userList.begin();
+		music.openFromFile(*currentSongItera);
+		music.play();
+	}
+}
 
 void getPart(socket& s,string songName,unsigned int part,ofstream &ofs){
 	message request,answer;
@@ -124,13 +126,12 @@ int main(int argc, char **argv) {
 	context ctx;
 	socket s(ctx, socket_type::req);
 	s.connect("tcp://localhost:5555");
-	// thread t(autoPlay);
 
 	/* interacting with user */
 	bool exit = false;
 	int menuNum = 1;
 	list<string> serverMusicList = getList(s);
-	// this_thread::sleep_for(std::chrono::milliseconds(200));
+	thread t(autoPlay);
 	do{
 		switch(menuNum){
 			case 1:{ // Available songs menu
@@ -148,13 +149,16 @@ int main(int argc, char **argv) {
 				list<string> availOpts{"play","remove","stop song","next song","goto store"};
 				string fpart(""), lpart("");
 				common(userList,availOpts,"PLAY LIST MENU",fpart,lpart);
-				if(fpart == "stop" && lpart == "song"){music.stop();continue;}
 				if(fpart == "goto" && lpart == "store"){menuNum = 1; continue;}
-				if(fpart == "next" && lpart == "song" && !userList.empty()){
+				if(fpart == "stop" && lpart == "song"){isPlayedByUser = false; music.stop();continue;}
+				if(fpart == "next" && lpart == "song" && !userList.empty() && isPlayedByUser){
+					isPlayedByUser = false;
+					music.stop();
 					advance(currentSongItera,1);
 					if(currentSongItera == userList.end()) currentSongItera=userList.begin();
 					music.openFromFile(*currentSongItera);
 					music.play();
+					isPlayedByUser = true;
 					continue;
 				}
 				string songName = lpart;
@@ -163,13 +167,15 @@ int main(int argc, char **argv) {
 					currentSongItera = getIterator(songName);
 					music.openFromFile(*currentSongItera);
 					music.play();
+					isPlayedByUser = true;
+					cv.notify_one();
 				}
 				else if(fpart == "remove"){
 					list<string>::iterator iter = getIterator(songName);
 					int i = distance(userList.begin(),iter);
 					int j = distance(userList.begin(),currentSongItera);
 					userList.remove(songName);
-					if(i == j){currentSongItera = userList.begin(); music.stop();}
+					if(i == j){currentSongItera = userList.begin();isPlayedByUser=false; music.stop();}
 					else if(j > i) advance(currentSongItera,-1);
 				}
 			} break;
