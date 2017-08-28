@@ -13,27 +13,96 @@ using namespace std;
 using namespace zmqpp;
 using namespace sf;
 
-/* needed global variables (these variables must be seen by all members)*/
-list<string> userList;
-list<string>::iterator currentSongItera= userList.begin();
-Music music;
-mutex autPlay;
-condition_variable cv;
-bool isPlayedByUser = false;
+class Client{
+	private:
+		list<string> _list;
+		list<string>::iterator i;
+		Music music;
+		mutex autPlay;
+		condition_variable cv;
+		thread t;
+		bool isPlaying, exit;
 
-void autoPlay(){
-	/* it will put a thread into autoplay action respecting certain rules */
-	while(true){
-		unique_lock<mutex> lock(autPlay);
-		cv.wait(lock,[]{return isPlayedByUser;});
-		while(music.getStatus() == SoundSource::Playing) this_thread::sleep_for(chrono::milliseconds(200));
-		if(!isPlayedByUser) continue;
-		advance(currentSongItera,1);
-		if(currentSongItera == userList.end()) currentSongItera = userList.begin();
-		music.openFromFile(*currentSongItera);
-		music.play();
-	}
-}
+		void setIterator(string& songName){
+			i = find(_list.begin(),_list.end(),songName);
+		}
+
+		list<string>::iterator getIterator(string& songName){
+			return find(_list.begin(),_list.end(),songName);
+		}
+
+		void autoPlay(){
+			while(!exit){
+				unique_lock<mutex> lock(autPlay);
+				cv.wait(lock,[&]{return isPlaying || exit;});
+				while(music.getStatus() == SoundSource::Playing) this_thread::sleep_for(chrono::milliseconds(200));
+				if(!isPlaying) continue;
+				advance(i,1);
+				if(i == _list.end()) i = _list.begin();
+				music.openFromFile(*i);
+				music.play();
+			}
+		}
+
+	public:
+		Client(){
+			_list = {};
+			i = _list.begin();
+			isPlaying = false;
+			exit = false;
+			t = thread(&Client::autoPlay,this);
+		}
+
+		~Client(){
+			isPlaying = false;
+			exit = true;
+			music.stop();
+			cv.notify_one();
+			t.join();
+		}
+
+		list<string> getList(){return _list;}
+
+		void addSong(string& songName){_list.push_back(songName);}
+
+		bool intoList(string& songName){
+			if(find(_list.begin(),_list.end(),songName) != _list.end()) return true;
+			return false;
+		}
+
+		void playSong(string& songName){
+			if(!intoList(songName)) return;
+			setIterator(songName);
+			music.openFromFile(*i);
+			music.play();
+			isPlaying = true;
+			cv.notify_one();
+		}
+
+		void removeSong(string& songName){
+			if(!intoList(songName)) return;
+			list<string>::iterator j = getIterator(songName);
+			_list.remove(songName);
+			if(*i == *j){
+				i = _list.begin();
+				isPlaying = false;
+				music.stop();
+			}
+		}
+
+		void nextSong(){
+			if(_list.empty() || !isPlaying) return;
+			advance(i,1);
+			if(i == _list.end()) i = _list.begin();
+			music.openFromFile(*i);
+			music.play();
+		}
+
+		void stopSong(){
+			isPlaying = false;
+			music.stop();
+		}
+};
 
 void getPart(socket& s,string songName,unsigned int part,ofstream &ofs){
 	/* it will get a given part of requested song */
@@ -115,12 +184,7 @@ bool intoList(list<string>& _list,string& songName){
 	return false;
 }
 
-list<string>::iterator getIterator(string& songName){
-	/* it will return iterator pointer of the given song name */
-	return find(userList.begin(),userList.end(),songName);
-}
-
-void common(list<string>& content,list<string>& availOpts,string title,string& fpart,string& lpart){
+void common(list<string> content,list<string>& availOpts,string title,string& fpart,string& lpart){
 	/* common function is common code lines that can be fit into an unique function */
 	string userOpt("");
 	do{
@@ -139,53 +203,36 @@ int main(int argc, char **argv) {
 	s.connect("tcp://localhost:5555");
 
 	/* interacting with user */
-	int menuNum = 1;
-	list<string> serverMusicList = getList(s);
-	thread t(autoPlay);
+	Client client;
+	list<string> servMusic = getList(s);
+	int num = 1;
+	bool exit = false;
+	//thread t(autoPlay);
 	do{
-		switch(menuNum){
+		switch(num){
 			case 1:{ // available songs menu
-				list<string> availOpts{"add","goto playlist"}; // available options for first menu
+				list<string> availOpts{"add","goto playlist","exit program"}; // available options for first menu
 				string fpart(""), lpart("");									 // first part and last part of user's string
-				common(serverMusicList,availOpts,"AVAILABLE SONGS MENU",fpart,lpart);
-				if(fpart == "goto" && lpart == "playlist"){menuNum = 2; continue;}
-				string songName = lpart;											 // if lpart isn't playlist it will probably be a songName
-				if(fpart == "add" && intoList(serverMusicList,songName) && !intoList(userList,songName)){
-					getSong(s,songName);
-					userList.push_back(songName);
+				common(servMusic,availOpts,"AVAILABLE SONGS MENU",fpart,lpart);
+				if(fpart == "goto" && lpart == "playlist") num = 2;
+				else if(fpart == "exit" && lpart == "program") exit = true;
+				else if(fpart == "add" && intoList(servMusic,lpart) && !client.intoList(lpart)){
+					getSong(s,lpart);
+					client.addSong(lpart);
 				}
 			}break;
 		 	case 2:{ // user's playlist menu
-				list<string> availOpts{"play","remove","stop song","next song","goto store"};
+				list<string> availOpts{"play","remove","stop song","next song","goto store","exit program"};
 				string fpart(""), lpart("");
-				common(userList,availOpts,"PLAYLIST MENU",fpart,lpart);
-				if(fpart == "goto" && lpart == "store"){menuNum = 1; continue;}
-				if(fpart == "stop" && lpart == "song"){isPlayedByUser = false; music.stop();continue;}
-				if(fpart == "next" && lpart == "song" && !userList.empty() && isPlayedByUser){
-					advance(currentSongItera,1);
-					if(currentSongItera == userList.end()) currentSongItera=userList.begin();
-					music.openFromFile(*currentSongItera);
-					music.play();
-					continue;
-				}
-				string songName = lpart;
-				if(!intoList(userList,songName)) continue;
-				if(fpart == "play"){
-					currentSongItera = getIterator(songName);
-					music.openFromFile(*currentSongItera);
-					music.play();
-					isPlayedByUser = true;
-					cv.notify_one();
-				}
-				else if(fpart == "remove"){
-					list<string>::iterator iter = getIterator(songName);
-					int i = distance(userList.begin(),iter);
-					int j = distance(userList.begin(),currentSongItera);
-					userList.remove(songName);
-					if(i == j){currentSongItera = userList.begin();isPlayedByUser=false; music.stop();}
-				}
+				common(client.getList(),availOpts,"PLAYLIST MENU",fpart,lpart);
+				if(fpart == "goto" && lpart == "store") num = 1;
+				else if(fpart == "exit" && lpart == "program") exit = true;
+				else if(fpart == "stop" && lpart == "song")	client.stopSong();
+				else if(fpart == "next" && lpart == "song")	client.nextSong();
+				else if(fpart == "play") client.playSong(lpart);
+				else if(fpart == "remove") client.removeSong(lpart);
 			} break;
 		}
-	}while(true);
+	}while(!exit);
 	return 0;
 }
