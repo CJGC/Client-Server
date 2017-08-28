@@ -87,7 +87,7 @@ void makeLine(string& line,string& screen,const size_t& screenSize,size_t rule){
 	size_t spaces = screenSize - line.size() - 2, makeRule = 0;
 	if(rule == 1) makeRule = spaces/2;
 	if(rule == 2) makeRule = 7;
-	for(size_t p=1; p<=spaces+1; p++)	if(p == makeRule) screen += item; else screen += " ";
+	for(size_t p=1; p<=spaces+1; p++)	if(p == makeRule) screen += line; else screen += " ";
 	screen += "|\n";
 }
 
