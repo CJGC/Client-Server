@@ -2,12 +2,12 @@
 #include <zmqpp/zmqpp.hpp>
 #include <SFML/Audio.hpp>
 #include <fstream>
+#include <string>
 #include <list>
 #include <iterator>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <string>
 
 using namespace std;
 using namespace zmqpp;
@@ -24,14 +24,17 @@ class Client{
 		bool isPlaying, exit;
 
 		void setIterator(string& songName){
+			/* it will set client's list iterator i */
 			i = find(_list.begin(),_list.end(),songName);
 		}
 
 		list<string>::iterator getIterator(string& songName){
+			/* it will get an iterator from client's list */
 			return find(_list.begin(),_list.end(),songName);
 		}
 
 		void autoPlay(){
+			/* It will automatically play the next available song into client's list, when the current song ends */
 			while(!exit){
 				unique_lock<mutex> lock(autPlay);
 				cv.wait(lock,[&]{return isPlaying || exit;});
@@ -62,15 +65,15 @@ class Client{
 		}
 
 		list<string> getList(){return _list;}
-
 		void addSong(string& songName){_list.push_back(songName);}
-
 		bool intoList(string& songName){
+			/* it will check if a given song name is into client's list */
 			if(find(_list.begin(),_list.end(),songName) != _list.end()) return true;
 			return false;
 		}
 
 		void playSong(string& songName){
+			/* it will play a given song */
 			if(!intoList(songName)) return;
 			setIterator(songName);
 			music.openFromFile(*i);
@@ -80,6 +83,7 @@ class Client{
 		}
 
 		void removeSong(string& songName){
+			/* it will remove a given song from client's list */
 			if(!intoList(songName)) return;
 			list<string>::iterator j = getIterator(songName);
 			_list.remove(songName);
@@ -91,6 +95,7 @@ class Client{
 		}
 
 		void nextSong(){
+			/* it will play the next song */
 			if(_list.empty() || !isPlaying) return;
 			advance(i,1);
 			if(i == _list.end()) i = _list.begin();
@@ -99,15 +104,16 @@ class Client{
 		}
 
 		void stopSong(){
+			/* it will stop a playing song */
 			isPlaying = false;
 			music.stop();
 		}
 };
 
-void getPart(socket& s,string songName,unsigned int part,ofstream &ofs){
+void getSongPart(socket& s,string songName,unsigned int part,ofstream &ofs){
 	/* it will get a given part of requested song */
 	message request,answer;
-	request << "getPart" << songName << part;
+	request << "getSongPart" << songName << part;
 	s.send(request);
 	s.receive(answer);
 	const void *data;
@@ -119,20 +125,20 @@ void getPart(socket& s,string songName,unsigned int part,ofstream &ofs){
 void getSong(socket &s,string& songName){
 	/* it will get song knowing the song's parts first, then requesting part by part */
 	message request,answer;
-	request << "meetParts" << songName << 0;
+	request << "songParts" << songName << 0;
 	s.send(request);
 	s.receive(answer);
 	size_t parts=0;
 	answer >> parts;
 	ofstream ofs(songName,ios::binary);
-	for(size_t part=1; part<=parts; part++) getPart(s,songName,part,ofs);
+	for(size_t part=1; part<=parts; part++) getSongPart(s,songName,part,ofs);
 	ofs.close();
 }
 
-list<string> processList(string& sList){
+list<string> makeList(string& rawList){
 	/* it will turn into a true object c++ list from a concatenated string sList */
 	list<string> songsList; string songName("");
-	for(auto c : sList){
+	for(auto c : rawList){
 		if(c == '\n'){songsList.push_back(songName); songName = "";}
 		else songName += c;
 	}
@@ -142,12 +148,18 @@ list<string> processList(string& sList){
 list<string> getList(socket &s){
 	/* it will get the list of available songs from hwserver.cpp */
 	message request,answer;
-	string sList;
+	string rawList;
 	request << "list" << "none" << 0;
 	s.send(request);
 	s.receive(answer);
-	answer >> sList;
-	return processList(sList);
+	answer >> rawList;
+	return makeList(rawList);
+}
+
+bool intoList(list<string>& _list,string& songName){
+	/* it will check if song name is into given list */
+	if(find(_list.begin(),_list.end(),songName) != _list.end()) return true;
+	return false;
 }
 
 void makeLine(string& line,string& screen,const size_t& screenSize,size_t rule){
@@ -178,12 +190,6 @@ string menu(string title,list<string>& content,list<string>& availOpts){
 	return "";
 }
 
-bool intoList(list<string>& _list,string& songName){
-	/* it will check if song name is into given list */
-	if(find(_list.begin(),_list.end(),songName) != _list.end()) return true;
-	return false;
-}
-
 void common(list<string> content,list<string>& availOpts,string title,string& fpart,string& lpart){
 	/* common function is common code lines that can be fit into an unique function */
 	string userOpt("");
@@ -197,23 +203,22 @@ void common(list<string> content,list<string>& availOpts,string title,string& fp
 }
 
 int main(int argc, char **argv) {
-	/* establishing connection */
+	/* defining variables */
 	context ctx;
 	socket s(ctx, socket_type::req);
 	s.connect("tcp://localhost:5555");
-
-	/* interacting with user */
 	Client client;
 	list<string> servMusic = getList(s);
-	int num = 1;
+	unsigned short int num = 1;
 	bool exit = false;
-	//thread t(autoPlay);
+
+	/* interacting with client */
 	do{
 		switch(num){
-			case 1:{ // available songs menu
+			case 1:{ // available songs
 				list<string> availOpts{"add","goto playlist","exit program"}; // available options for first menu
 				string fpart(""), lpart("");									 // first part and last part of user's string
-				common(servMusic,availOpts,"AVAILABLE SONGS MENU",fpart,lpart);
+				common(servMusic,availOpts,"AVAILABLE SONGS",fpart,lpart);
 				if(fpart == "goto" && lpart == "playlist") num = 2;
 				else if(fpart == "exit" && lpart == "program") exit = true;
 				else if(fpart == "add" && intoList(servMusic,lpart) && !client.intoList(lpart)){
@@ -221,10 +226,10 @@ int main(int argc, char **argv) {
 					client.addSong(lpart);
 				}
 			}break;
-		 	case 2:{ // user's playlist menu
+		 	case 2:{ // client's playlist
 				list<string> availOpts{"play","remove","stop song","next song","goto store","exit program"};
 				string fpart(""), lpart("");
-				common(client.getList(),availOpts,"PLAYLIST MENU",fpart,lpart);
+				common(client.getList(),availOpts,"PLAYLIST",fpart,lpart);
 				if(fpart == "goto" && lpart == "store") num = 1;
 				else if(fpart == "exit" && lpart == "program") exit = true;
 				else if(fpart == "stop" && lpart == "song")	client.stopSong();
