@@ -4,16 +4,14 @@
 #include <string.h>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <iostream>
-#include <cassert>
 #include <cmath>
 #include <fstream>
-#include <unordered_map>
 
 using namespace std;
 
-int getFiles(vector<string> &v,const char *format,const char *directory="") {
+int getSongs(vector<string> &v,const char *format,const char *directory="") {
+  /* it will get songs name from a given directory */
   DIR *dir; // pointer that will contain current directory addr
   struct dirent *file; // pointer that will contain each file from current directory
   char currentDir[FILENAME_MAX]; // currentDir will store current directory path
@@ -27,7 +25,8 @@ int getFiles(vector<string> &v,const char *format,const char *directory="") {
   return 0;
 }
 
-vector<char> getPackage(string& musPath,string& songName,size_t limit,unsigned int part,size_t &bits){
+vector<char> getSongPart(string& musPath,string& songName,size_t limit,unsigned int part,size_t &bits){
+  /* it will load a determined song part */
   string dir = musPath+songName;
   ifstream ifs(dir,ios::binary | ios::ate);
   ifstream::pos_type songSize = ifs.tellg();
@@ -36,13 +35,14 @@ vector<char> getPackage(string& musPath,string& songName,size_t limit,unsigned i
   if(leftoverPart >= limit) bits = limit;
   else bits = leftoverPart;
   ifs.seekg((part-1)*limit,ios::beg);
-  vector<char> package(bits);
-  ifs.read(package.data(),bits);
+  vector<char> songPart(bits);
+  ifs.read(songPart.data(),bits);
   ifs.close();
-  return package;
+  return songPart;
 }
 
-size_t meetParts(string& musPath,string& songName,size_t limit){
+size_t songParts(string& musPath,string& songName,size_t limit){
+  /* it will tell how many parts is composed a given song */
   string dir = musPath+songName;
   ifstream ifs(dir, ios::binary | ios::ate);
   ifstream::pos_type songSize = ifs.tellg();
