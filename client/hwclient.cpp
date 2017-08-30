@@ -12,6 +12,7 @@
 using namespace std;
 using namespace zmqpp;
 using namespace sf;
+string ip = "localhost";
 
 class Client{
 	private:
@@ -206,7 +207,7 @@ int main(int argc, char **argv) {
 	/* defining variables */
 	context ctx;
 	socket s(ctx, socket_type::req);
-	s.connect("tcp://localhost:5555");
+	s.connect("tcp://"+ip+":5555");
 	Client client;
 	list<string> servMusic = getList(s);
 	unsigned short int num = 1;
