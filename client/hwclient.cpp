@@ -182,8 +182,9 @@ string menu(string title,list<string>& content,list<string>& availOpts){
 	makeLine(title,screen,screenSize,1);
 	screen += line+"\n";
 	for(auto &item : content){ screen += "|"; makeLine(item,screen,screenSize,2);}
-	screen += line+"\n\n** <Available operators> **\n";
-	for(auto &opt : availOpts) screen += " -> "+opt+"\n";
+	screen += line+"\n\n *<Available operators>* ";
+	screen += "Example use: 'add namesong.ogg' | 'goto playlist'\n";
+	for(auto &opt : availOpts) screen += " * "+opt+"\n";
 	screen += "\nType option: ";
 	cout << screen;
 	getline(cin, option);
