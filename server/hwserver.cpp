@@ -7,7 +7,7 @@ using namespace std;
 class Server{
   private:
     message cliReq, reply;
-    unsigned int part;
+    unsigned int part, maxLimitPart;
     string op, song, songsPackage, dir;
 
     void buildSongsPackage(vector<string>& songs){
@@ -17,6 +17,7 @@ class Server{
 
   public:
     Server(string& dir){
+      maxLimitPart = 1024*512; // 1024 bits * 512 kb
       vector<string> songs;
       if(getSongs(songs,".ogg",dir.c_str()) != 0) exit(1);
       buildSongsPackage(songs);
@@ -30,11 +31,11 @@ class Server{
         cliReq >> op >> song >> part;
         if(op == "getSongPart"){
           size_t partSize = 0;
-          vector<char> songPart = getSongPart(dir,song,512000,part,partSize);
+          vector<char> songPart = getSongPart(dir,song,maxLimitPart,part,partSize);
           reply.add_raw(songPart.data(),partSize);
         }
         else if(op == "list") reply << songsPackage;
-        else if(op == "songParts") reply << songParts(dir,song,512000);
+        else if(op == "songParts") reply << songParts(dir,song,maxLimitPart);
         s.send(reply);
       }
     }
