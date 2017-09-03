@@ -87,12 +87,12 @@ class Client{
 			/* it will remove a given song from client's list */
 			if(!intoList(songName)) return;
 			list<string>::iterator j = getIterator(songName);
-			_list.remove(songName);
 			if(*i == *j){
 				i = _list.begin();
 				isPlaying = false;
 				music.stop();
 			}
+			_list.remove(songName);
 		}
 
 		void nextSong(){
