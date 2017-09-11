@@ -3,15 +3,15 @@
 #include <time.h>
 
 void generate(FILE *p,size_t rows,size_t columns){
-  /* This function will generate and write a float matrix randomly */
+  /* This function will generate and write a double matrix randomly */
   srand(time(NULL));
   fprintf(p,"%zu\n%zu\n",rows,columns);
   for(size_t i=0; i<rows; i++){
     for(size_t j=0; j<columns; j++){
       int a = rand(), b = rand();
-      float x = (float)a/(float)b;
+      double x = (double)a/(double)b;
       if(j+1 == columns) fprintf(p,"%.2f",x);
-      else fprintf(p, "%.2f,",x);
+      else fprintf(p, "%.2f ",x);
     }fprintf(p,"%c",'\n');
   }
 }
