@@ -1,0 +1,9 @@
+Implementar los siguiente
+V 0.0 n³
+v 1.0 Ingenua de n x n hilos
+v 2.0 hilo por fila (ingenua)
+v 2.1 hilo por fila (max 8)
+v 3.0 A diamond
+v 3.1 A diamond (potencia logarítmica)
+
+http://www.dis.uniroma1.it/challenge9/download.shtml
