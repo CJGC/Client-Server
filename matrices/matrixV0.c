@@ -63,14 +63,14 @@ void mulMatrices(double *M1,size_t M1r,size_t M1c,double *M2,size_t M2r,size_t M
      columns, M2r -> Matrix2 rows, M2c -> Matrix2 columns
   */
   if(M1c != M2r){printf("Matrices cannot be multiply!"); return;}
-  size_t M3size = M1r*M2c, M3index = 0;
+  size_t M3size = M1r*M2c;
   double M3[M3size]; /* M3 -> Matrix3 will contain the result */
 
   for(size_t i=0; i<M1r; i++)
-    for(size_t j=0; j<M2c; j++,M3index++){
+    for(size_t j=0; j<M2c; j++){
       double data = 0.0;
       for(size_t k=0; k<M1c; k++) data = M1[i*M1c+k] * M2[k*M2c+j] + data;
-      M3[M3index] = data;
+      M3[i*M1c+j] = data;
     }
   hardrive(M3,M1r,M2c);
 }
