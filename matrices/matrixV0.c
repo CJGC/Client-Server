@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 FILE * openFile(char const *fileName,FILE *f){
   /* This function will try to open a file */
@@ -95,7 +96,10 @@ int main(int argc, char const *argv[]) {
   getData(M2,f2);
 
   /* multiplying matrices */
+  clock_t begin = clock();
   mulMatrices(M1,M1r,M1c,M2,M2r,M2c);
+  clock_t end = clock();
+  double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
   /* freeing memory */
   free(M1);
@@ -104,5 +108,6 @@ int main(int argc, char const *argv[]) {
   /* closing files */
   fclose(f1);
   fclose(f2);
+  printf("\nTime = %f\n",time_spent);
   return 0;
 }
