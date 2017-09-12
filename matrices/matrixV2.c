@@ -49,13 +49,11 @@ void hardrive(float *M,size_t Mr,size_t Mc){
      M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
   */
   FILE *f = fopen("output.txt","w+");
-  for(size_t i=0;i<Mr;i++){
+  for(size_t i=0;i<Mr;i++)
     for(size_t j=0;j<Mc;j++){
-      if(j+1 == Mc) fprintf(f,"%.1f",M[i*Mc + j]);
+      if(j+1 == Mc) fprintf(f,"%.1f\n",M[i*Mc + j]);
       else fprintf(f,"%.1f ",M[i*Mc + j]);
     }
-    fprintf(f,"%c",'\n');
-  }
   fclose(f);
 }
 
@@ -66,16 +64,16 @@ void mulMatrices(float *M1,size_t M1r,size_t M1c,float *M2,size_t M2r,size_t M2c
      columns, M2r -> Matrix2 rows, M2c -> Matrix2 columns
   */
   if(M1c != M2r){printf("Matrices cannot be multiply!"); return;}
-  size_t M3size = M1r*M2c, M3index=0,i=0,j=0,k=0, chunk=1;
+  size_t M3size = M1r*M2c, i=0,j=0,k=0, chunk=1;
   float M3[M3size]; /* M3 -> Matrix3 will contain the result */
-  #pragma omp parallel private(i,j,k,M3index) shared(M3,chunk) num_threads(M1r)
+  #pragma omp parallel private(i,j,k) shared(M3,chunk) num_threads(M1r)
   {
     #pragma omp for schedule(dynamic,chunk)
       for(i=0; i<M1r; i++)
-        for(j=0; j<M2c; j++,M3index++){
+        for(j=0; j<M2c; j++){
           float data = 0.0;
           for(k=0; k<M1c; k++) data = M1[i*M1c+k] * M2[k*M2c+j] + data;
-          M3[M3index] = data;
+          M3[i*M1c+j] = data;
         }
   }
   hardrive(M3,M1r,M2c);
