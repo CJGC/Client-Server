@@ -66,10 +66,10 @@ void mulMatrices(float *M1,size_t M1r,size_t M1c,float *M2,size_t M2r,size_t M2c
      columns, M2r -> Matrix2 rows, M2c -> Matrix2 columns
   */
   if(M1c != M2r){printf("Matrices cannot be multiply!"); return;}
-  size_t M3size = M1r*M2c, M3index=0,i=0,j=0,k=0, chunk=M1r*M1c;
-	int tid = 0, noThreads = 0;
+  size_t M3size = M1r*M2c, M3index=0,i=0,j=0,k=0, chunk=1;
+  int tid = 0, noThreads = 0;
   float M3[M3size]; /* M3 -> Matrix3 will contain the result */
-  #pragma omp parallel private(i,j,k,M3index,tid,noThreads) shared(M3,chunk) num_threads(M1r*M1c)
+  #pragma omp parallel private(i,j,k,M3index,tid,noThreads) shared(M3,chunk) num_threads(M1r)
   {
     tid = omp_get_thread_num();
     if(tid == 0){
