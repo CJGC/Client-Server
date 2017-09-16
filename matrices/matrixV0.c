@@ -58,9 +58,8 @@ void hardrive(double *M,size_t Mr,size_t Mc){
 
 void mulMatrices(double *M,size_t Mr,size_t Mc){
   /*
-    This function will multiply two matrices (M1,M2)
-     M1 -> Matrix1, M2 -> Matrix2, M1r -> Matrix1 rows, M1c -> Matrix1
-     columns, M2r -> Matrix2 rows, M2c -> Matrix2 columns
+    This function will multiply a matrix by itself
+    M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
   */
   size_t MRsize = Mr*Mc;
   double MR[MRsize]; /* MR -> Matrix Result will contain the result */
@@ -77,12 +76,12 @@ void mulMatrices(double *M,size_t Mr,size_t Mc){
 int main(int argc, char const *argv[]) {
   if(argc != 2){printf("There should be 3 arguments!\n");exit(1);}
   FILE *f=NULL; /* file pointers */
-  double *M; /* matrices (M1,M2) */
-  size_t Mr=0,Mc=0; /* matrices (rows and columns) */
+  double *M; /* matrix M */
+  size_t Mr=0,Mc=0; /* matrix (rows and columns) */
 
-  /* opening files */
+  /* opening file */
   f = openFile(argv[1],f);
-  /* building matrices */
+  /* building matrix */
   M = buildMatrix(f,Mr,Mc);
   /* getting data */
   getData(f,M);
@@ -93,7 +92,7 @@ int main(int argc, char const *argv[]) {
   double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
   /* freeing memory */
   free(M);
-  /* closing files */
+  /* closing file */
   fclose(f);
 
   printf("\nTime = %f\n",time_spent);
