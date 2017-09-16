@@ -11,14 +11,14 @@ FILE * openFile(char const *fileName,FILE *f){
 
 double * buildMatrix(FILE *f,size_t &rows,size_t &columns){
   /* This function will build a matrix M */
-  fscanf(f,"%d",&rows);
-  fscanf(f,"%d",&columns);
+  fscanf(f,"%zu",&rows);
+  fscanf(f,"%zu",&columns);
   fgetc(f); /* skipping nasty character */
   double *M = (double *)malloc(rows*columns*sizeof(double));
   return M;
 }
 
-void getData(double *M,FILE *f){
+void getData(FILE *f, double *M){
   /* This function will capture data from plain text file to system memory */
   char *data = (char *)malloc(sizeof(char)), *newData = NULL,ch = ' ';
   size_t dataSize = sizeof(char), Mindex = 0;
@@ -56,56 +56,46 @@ void hardrive(double *M,size_t Mr,size_t Mc){
   fclose(f);
 }
 
-void mulMatrices(double *M1,size_t M1r,size_t M1c,double *M2,size_t M2r,size_t M2c){
+void mulMatrices(double *M,size_t Mr,size_t Mc){
   /*
     This function will multiply two matrices (M1,M2)
      M1 -> Matrix1, M2 -> Matrix2, M1r -> Matrix1 rows, M1c -> Matrix1
      columns, M2r -> Matrix2 rows, M2c -> Matrix2 columns
   */
-  if(M1c != M2r){printf("Matrices cannot be multiply!"); return;}
-  size_t M3size = M1r*M2c;
-  double M3[M3size]; /* M3 -> Matrix3 will contain the result */
+  size_t MRsize = Mr*Mc;
+  double MR[MRsize]; /* MR -> Matrix Result will contain the result */
 
-  for(size_t i=0; i<M1r; i++)
-    for(size_t j=0; j<M2c; j++){
+  for(size_t i=0; i<Mr; i++)
+    for(size_t j=0; j<Mc; j++){
       double data = 0.0;
-      for(size_t k=0; k<M1c; k++) data = M1[i*M1c+k] * M2[k*M2c+j] + data;
-      M3[i*M1c+j] = data;
+      for(size_t k=0; k<Mr; k++) data += M[i*Mc+k] * M[k*Mc+j];
+      MR[i*Mc+j] = data;
     }
-  hardrive(M3,M1r,M2c);
+  hardrive(MR,Mr,Mc);
 }
 
 int main(int argc, char const *argv[]) {
-  if(argc != 3){printf("There should be 3 arguments!\n");exit(1);}
-  FILE *f1=NULL, *f2=NULL; /* file pointers */
-  double *M1, *M2; /* matrices (M1,M2) */
-  size_t M1r=0,M1c=0, M2r=0, M2c=0; /* matrices (rows and columns) */
+  if(argc != 2){printf("There should be 3 arguments!\n");exit(1);}
+  FILE *f=NULL; /* file pointers */
+  double *M; /* matrices (M1,M2) */
+  size_t Mr=0,Mc=0; /* matrices (rows and columns) */
 
   /* opening files */
-  f1 = openFile(argv[1],f1);
-  f2 = openFile(argv[2],f2);
-
+  f = openFile(argv[1],f);
   /* building matrices */
-  M1 = buildMatrix(f1,M1r,M1c);
-  M2 = buildMatrix(f2,M2r,M2c);
-
+  M = buildMatrix(f,Mr,Mc);
   /* getting data */
-  getData(M1,f1);
-  getData(M2,f2);
-
+  getData(f,M);
   /* multiplying matrices */
   clock_t begin = clock();
-  mulMatrices(M1,M1r,M1c,M2,M2r,M2c);
+  mulMatrices(M,Mr,Mc);
   clock_t end = clock();
   double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
   /* freeing memory */
-  free(M1);
-  free(M2);
-
+  free(M);
   /* closing files */
-  fclose(f1);
-  fclose(f2);
+  fclose(f);
+
   printf("\nTime = %f\n",time_spent);
   return 0;
 }
