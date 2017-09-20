@@ -3,6 +3,7 @@
 #include <time.h>
 #include <thread>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 using vec = vector<double>;
@@ -60,7 +61,7 @@ void hardrive(vec& M,const size_t& Mr,const size_t& Mc){
 
 void threadMul(vec& M,vec& MR,const size_t& Mr,const size_t& Mc,size_t ini,size_t end){
   /* Each thread will multiply a chunk of matrix M */
-  for(size_t i=ini; i<=end; i++)
+  for(size_t i=ini; i<=end && i<Mr; i++)
     for(size_t j=0; j<Mc; j++){
       double data = 0.0;
       for(size_t k=0; k<Mr; k++) data += M[i*Mc+k] * M[k*Mc+j];
@@ -77,17 +78,21 @@ void matMul(vec& M,const size_t& Mr,const size_t& Mc){
   vector<thread> t;               // vector threads t
   MR.resize(M.size());            // defining MR vector size
   t.resize(8);                    // 8 threads
-  size_t ti = 0;                  // t index
-  if(Mr % t.size()) return;       // if Matrix rows aren't divisible by t threads, exit
-  size_t chunk = Mr/t.size();     // chunk for each thread
-
-  for(ti=0; ti<t.size(); ti++){
-    size_t end = (ti+1)*chunk - 1;
-    size_t ini = end - chunk + 1;
-    t[ti] = thread(threadMul,ref(M),ref(MR),ref(Mr),ref(Mc),ini,end);
-  }
-
-  for(ti=0; ti<t.size(); ti++) t[ti].join();
+	size_t ti=0, i=0;								// thread index, i index
+  size_t chunk = floor((double)Mr/t.size());// chunk for each thread
+	size_t actThreads=0;						// active threads
+	if(!chunk) chunk=1;							// if not chunk, rows are lower than 8
+	int pendRows=Mr;								// pending rows to be processed|	
+	do{
+  	for(ti=0, i; ti<t.size() && pendRows > 0; ti++,i++,actThreads++){
+			size_t end = (i+1)*chunk - 1;
+			size_t ini = end - chunk + 1;
+			t[ti] = thread(threadMul,ref(M),ref(MR),ref(Mr),ref(Mc),ini,end);
+			pendRows -= chunk;
+  	}
+  	for(ti=0; ti<actThreads; ti++) t[ti].join();
+		actThreads=0;
+	}while(pendRows > 0);
   hardrive(MR,Mr,Mc);
 }
 
@@ -96,7 +101,6 @@ int main(int argc, char const *argv[]){
   FILE *f=NULL;               // file pointer
   vec M;                      // matrix M
   size_t Mr=0,Mc=0;           // matrix (rows and columns)
-
   f = openFile(f,argv[1]);    // opening file
   getDimensions(f,Mr,Mc);     // getting matrix rows and cols
   getData(f,M);               // getting disk data
@@ -105,7 +109,6 @@ int main(int argc, char const *argv[]){
   clock_t end = clock();      // end clock
   double totalTime = (double)(end - begin) / CLOCKS_PER_SEC;
   fclose(f);                  // closing file
-
   printf("Time = %f\n",totalTime);
   return 0;
 }
