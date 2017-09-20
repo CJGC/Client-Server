@@ -71,28 +71,28 @@ void threadMul(vec& M,vec& MR,const size_t& Mr,const size_t& Mc,size_t ini,size_
 
 void matMul(vec& M,const size_t& Mr,const size_t& Mc){
   /*
-    This function will multiply a matrix by itself
-    M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
+  This function will multiply a matrix by itself
+  M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
   */
   vec MR;                         // MR -> Matrix Result
   vector<thread> t;               // vector threads t
   MR.resize(M.size());            // defining MR vector size
   t.resize(8);                    // 8 threads
-	size_t ti=0, i=0;								// thread index, i index
+  size_t ti=0, i=0;								// thread index, i index
   size_t chunk = floor((double)Mr/t.size());// chunk for each thread
-	size_t actThreads=0;						// active threads
-	if(!chunk) chunk=1;							// if not chunk, rows are lower than 8
-	int pendRows=Mr;								// pending rows to be processed|	
-	do{
-  	for(ti=0, i; ti<t.size() && pendRows > 0; ti++,i++,actThreads++){
-			size_t end = (i+1)*chunk - 1;
-			size_t ini = end - chunk + 1;
-			t[ti] = thread(threadMul,ref(M),ref(MR),ref(Mr),ref(Mc),ini,end);
-			pendRows -= chunk;
-  	}
-  	for(ti=0; ti<actThreads; ti++) t[ti].join();
-		actThreads=0;
-	}while(pendRows > 0);
+  size_t actThreads=0;						// active threads
+  if(!chunk) chunk=1;							// if not chunk, rows are lower than 8
+  int pendRows=Mr;								// pending rows to be processed|
+  do{
+    for(ti=0, i; ti<t.size() && pendRows > 0; ti++,i++,actThreads++){
+      size_t end = (i+1)*chunk - 1;
+      size_t ini = end - chunk + 1;
+      t[ti] = thread(threadMul,ref(M),ref(MR),ref(Mr),ref(Mc),ini,end);
+      pendRows -= chunk;
+    }
+    for(ti=0; ti<actThreads; ti++) t[ti].join();
+    actThreads=0;
+  }while(pendRows > 0);
   hardrive(MR,Mr,Mc);
 }
 
