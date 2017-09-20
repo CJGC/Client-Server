@@ -78,11 +78,11 @@ void matMul(vec& M,const size_t& Mr,const size_t& Mc){
   vector<thread> t;               // vector threads t
   MR.resize(M.size());            // defining MR vector size
   t.resize(8);                    // 8 threads
-  size_t ti=0, i=0;								// thread index, i index
+  size_t ti=0, i=0;               // thread index, i index
   size_t chunk = floor((double)Mr/t.size());// chunk for each thread
-  size_t actThreads=0;						// active threads
-  if(!chunk) chunk=1;							// if not chunk, rows are lower than 8
-  int pendRows=Mr;								// pending rows to be processed|
+  size_t actThreads=0;            // active threads
+  if(!chunk) chunk=1;             // if not chunk, rows are lower than 8
+  int pendRows=Mr;                // pending rows to be processed|
   do{
     for(ti=0, i; ti<t.size() && pendRows > 0; ti++,i++,actThreads++){
       size_t end = (i+1)*chunk - 1;
