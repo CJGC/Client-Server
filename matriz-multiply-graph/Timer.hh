@@ -16,6 +16,6 @@ public:
 
   long elapsed() {
     auto end = chrono::high_resolution_clock::now();
-    return chrono::duration_cast<chrono::nanoseconds>(end - start).count();
+    return chrono::duration_cast<chrono::seconds>(end - start).count();
   }
 };
