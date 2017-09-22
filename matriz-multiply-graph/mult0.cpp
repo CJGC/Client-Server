@@ -1,5 +1,5 @@
 #include "graphreader.hh"
-#include "timer.hh"
+#include "Timer.hh"
 #include <cassert>
 #include <iostream>
 #include <string>
