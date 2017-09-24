@@ -15,7 +15,7 @@ void hardrive(vec& M,const size_t& Mr,const size_t& Mc){
    This function will write the result in hardrive
    M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
    */
-   FILE *f = fopen("graph2.1.out","w+");
+   FILE *f = fopen("graphV2.1.out","w+");
    for(size_t i=0;i<Mr;i++)
       for(size_t j=0;j<Mc;j++){
          if(j+1 == Mc) fprintf(f,"%d\n",M[i*Mc + j]);
