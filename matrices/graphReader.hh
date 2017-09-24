@@ -7,11 +7,10 @@
 using namespace std;
 
 template<typename T>
-vector<T> readGraph(string fileName){
+vector<T> readGraph(string fileName,size_t& nodes){
    vector<T> m;
    ifstream infile(fileName);
    string line;
-   unsigned int nodes;
 
    while(getline(infile,line)){
       istringstream iss(line);
@@ -28,5 +27,6 @@ vector<T> readGraph(string fileName){
          m[(i-1)*nodes + (j-1)] = 1;
       }
    }
+   infile.close();
    return m;
 }
