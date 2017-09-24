@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "timer.hh"
-#include "graphReader.hh"
 #include <iostream>
 #include <vector>
+#include "graphReader.hh"
+#include "timer.hh"
 
 using namespace std;
 using vec = vector<int>;
@@ -22,7 +22,7 @@ void hardrive(vec& M,const size_t& Mr,const size_t& Mc){
    fclose(f);
 }
 
-void mulGraph(vec& M,const size_t& Mr,const size_t& Mc){
+void graphMul(vec& M,const size_t& Mr,const size_t& Mc){
    /*
    This function will multiply a matrix by itself
    M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
@@ -46,7 +46,7 @@ int main(int argc, char const *argv[]) {
    vec graph = readGraph<int>(argv[1],nodes);
    rows = cols = nodes;
    Timer timer("matrixV0.c");
-   mulGraph(graph,rows,cols);
+   graphMul(graph,rows,cols);
    cout<<"Elapsed time = "<< timer.elapsed();
    return 0;
 }
