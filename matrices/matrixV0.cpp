@@ -13,7 +13,7 @@ void hardrive(vec& M,const size_t& Mr,const size_t& Mc){
    This function will write the result in hardrive
    M -> Matrix, Mr -> Matrix rows, Mc -> Matrix columns
    */
-   FILE *f = fopen("graph.out","w+");
+   FILE *f = fopen("graphV0.out","w+");
    for(size_t i=0;i<Mr;i++)
       for(size_t j=0;j<Mc;j++){
          if(j+1 == Mc) fprintf(f,"%d\n",M[i*Mc + j]);
@@ -47,6 +47,6 @@ int main(int argc, char const *argv[]) {
    rows = cols = nodes;
    Timer timer("matrixV0.c");
    graphMul(graph,rows,cols);
-   cout<<"Elapsed time = "<< timer.elapsed();
+   cout<<"Elapsed time = "<< timer.elapsed()<<" milliseconds"<<endl;
    return 0;
 }
