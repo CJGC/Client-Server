@@ -1,6 +1,6 @@
 CC=g++ -std=c++11
 
-all: matrixV0 matrixV1 matrixV2 matrixV2.1 execute
+all: matrixV0 matrixV1 matrixV2 matrixV2.1 
 
 matrixV0: matrixV0.cpp
 	${CC} matrixV0.cpp -o matrixV0.bin
