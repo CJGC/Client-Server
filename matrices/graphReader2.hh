@@ -21,15 +21,14 @@ void readGraph(str fileName,vec* indM,_map& M){
       if(line[0] == 'p'){
          str op, word;
          _uint nodes,arch;
-         iss >> op >> word >> nodes >> arch; 
+         iss >> op >> word >> nodes >> arch;
          indM[0].resize(arch/2);
          indM[1].resize(arch/2);
          cout << "Graph with " << nodes << " nodes" << endl;
       }
       else if(line[0] == 'e'){
          char op;
-         _uint i,j, weight;
-         cout << k<< endl;
+         _uint i,j;
          iss >> op >> i >> j;
          indM[0][k] = i;
          indM[1][k] = j;
