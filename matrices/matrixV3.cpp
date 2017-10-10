@@ -13,7 +13,6 @@ uint getIndex(vec& v,uint& value){
 	return it - v.begin();
 }
 
-// 2 1
 uint minVal(_map& graph,vec* indices,vec* dIndices,uint iR,uint jR,uint iter){
 	uint k = getIndex(indices[0],iR), _min = numeric_limits<uint>::max();
 	for(k;indices[0][k] == indices[0][iter];k++){
@@ -37,8 +36,8 @@ void Adiamond(_map& graph,vec* indices,vec* dIndices){
 	_map R;
 	uint indicesSize = indices[0].size(), iterator = 0;
 	while(iterator < indicesSize){
-		uint iR = indices[0][indicesSize-1];//iterator];
-		uint jR = indices[1][indicesSize-1];//iterator];
+		uint iR = indices[0][iterator];
+		uint jR = indices[1][iterator];
 		string key(to_string(iR)+to_string(jR));
 		R[key] = minVal(graph,indices,dIndices,iR,jR,iterator);
 		iterator++;
@@ -51,8 +50,7 @@ void Adiamond(_map& graph,vec* indices,vec* dIndices){
 	}
 }
 
-int main(int argc, char const **argv)
-{
+int main(int argc, char const **argv){
 	_map graph;
 	vec indices[2], dIndices[2]; // indices[0]=i, indices[1]=j ; d -> duplicate
 	loadgraph(argv[1], indices, graph);
