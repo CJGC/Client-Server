@@ -9,9 +9,8 @@ using namespace std;
 using vec = vector<unsigned int>;
 using _map = map<string,unsigned int>;
 typedef string str;
-typedef unsigned int _uint;
 
-void readGraph(str fileName,vec* indM,_map& M){
+void loadgraph(str fileName,vec* indM,_map& M){
    ifstream infile(fileName);
    str line;
    size_t k=0;
@@ -20,7 +19,7 @@ void readGraph(str fileName,vec* indM,_map& M){
       istringstream iss(line);
       if(line[0] == 'p'){
          str op, word;
-         _uint nodes,arch;
+         uint nodes,arch;
          iss >> op >> word >> nodes >> arch;
          indM[0].resize(arch/2);
          indM[1].resize(arch/2);
@@ -28,12 +27,12 @@ void readGraph(str fileName,vec* indM,_map& M){
       }
       else if(line[0] == 'e'){
          char op;
-         _uint i,j;
-         iss >> op >> i >> j;
+         uint i,j, weight;
+         iss >> op >> i >> j >> weight;
          indM[0][k] = i;
          indM[1][k] = j;
          str key(to_string(i)+to_string(j));
-         M[key] = 1;
+         M[key] = weight;
          k++;
       }
    }
