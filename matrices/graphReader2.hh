@@ -3,38 +3,28 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <map>
 
 using namespace std;
-using vec = vector<unsigned int>;
-using _map = map<string,unsigned int>;
 typedef string str;
 
-void loadgraph(str fileName,vec* indM,_map& M){
-   ifstream infile(fileName);
-   str line;
-   size_t k=0;
+void loadgraph(str fileName){
+  ifstream infile(fileName);
+  str line;
 
-   while(getline(infile,line)){
-      istringstream iss(line);
-      if(line[0] == 'p'){
-         str op, word;
-         uint nodes,arch;
-         iss >> op >> word >> nodes >> arch;
-         indM[0].resize(arch/2);
-         indM[1].resize(arch/2);
-         cout << "Graph with " << nodes << " nodes" << endl;
-      }
-      else if(line[0] == 'e'){
-         char op;
-         uint i,j, weight;
-         iss >> op >> i >> j >> weight;
-         indM[0][k] = i;
-         indM[1][k] = j;
-         str key(to_string(i)+to_string(j));
-         M[key] = weight;
-         k++;
-      }
-   }
-   infile.close();
+  while(getline(infile,line)){
+    istringstream iss(line);
+    if(line[0] == 'p'){
+      str op, word;
+      uint nodes,arch;
+      iss >> op >> word >> nodes >> arch;
+      cout << "Graph with " << nodes << " nodes" << endl;
+    }
+    else if(line[0] == 'e'){
+      char op;
+      uint i,j, weight = 1;
+      iss >> op >> i >> j; //>> weight;
+    }
+  }
+
+  infile.close();
 }
