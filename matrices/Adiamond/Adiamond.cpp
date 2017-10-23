@@ -18,6 +18,8 @@ void merge(vec* graph,vec* result){
 		node *nod = n, *next;
 		while(nod != NULL){
 			next = nod->right;
+			nod->right = NULL;
+			nod->down = NULL;
 			linkNode(graph,nod);
 			nod = next;
 		}
@@ -42,8 +44,8 @@ uint _min(node* pr,node* pc){
 
 void buildResult(vec* graph, vec* result,uint nodes){
 	/* it will simulate an iteration of A diamond algorithm */
-	for(int i=0; i<nodes; i++)
-		for(int j=0; j<nodes; j++){
+	for(uint i=0; i<nodes; i++)
+		for(uint j=0; j<nodes; j++){
 			if(i == j) continue;
 			node *pr = graph[0][i]; // pointer to row
 			node *pc = graph[1][j]; // pointer to col
