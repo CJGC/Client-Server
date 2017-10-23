@@ -1,4 +1,6 @@
 #include <limits>
+#include <thread>
+#include <cmath>
 #include "graphReader2.hh"
 
 void show(vec* graph){
@@ -42,9 +44,9 @@ uint _min(node* pr,node* pc){
 	return min;
 }
 
-void buildResult(vec* graph, vec* result,uint nodes){
-	/* it will simulate an iteration of A diamond algorithm */
-	for(uint i=0; i<nodes; i++)
+void pChunk(vec* graph,vec* result,uint nodes,uint ini,uint end){
+	/* it will process a chunk of data by a thread */
+	for(uint i=ini; i<=end && i<nodes; i++)
 		for(uint j=0; j<nodes; j++){
 			if(i == j) continue;
 			node *pr = graph[0][i]; // pointer to row
@@ -55,6 +57,27 @@ void buildResult(vec* graph, vec* result,uint nodes){
 				linkNode(result,newNod);
 			}
 		}
+}
+
+void buildResult(vec* graph, vec* result,uint nodes){
+	/* it will simulate an iteration of A diamond algorithm by chunks */
+	uint threadsAmount = 7, ti = 0, i = 0, actiThreads = 0;
+	thread t[threadsAmount];
+	uint chunk = floor((double)nodes/threadsAmount);
+	int pendRows = nodes;
+	if(!chunk) chunk = 1;
+
+	do{
+		for(ti=0, i; ti<threadsAmount && pendRows > 0; ti++,i++,actiThreads++){
+			uint end = (i+1)*chunk - 1;
+			uint ini = end - chunk + 1;
+			t[ti] = thread(pChunk,graph,result,nodes,ini,end);
+			pendRows -= chunk;
+		}
+		for(ti=0; ti<actiThreads; ti++) t[ti].join();
+		actiThreads=0;
+	}while(pendRows > 0);
+
 }
 
 void Adiamond(vec* graph){
