@@ -5,17 +5,10 @@ void show(vec* graph){
 	/* it will show the graph */
 	for(node *n : graph[0]){
 	  node *nod = n;
-	  int before = 0, after = 0;
-	  while(nod != NULL){
-	    cout << nod->value;
-	    before = nod->j;
-	    nod = nod->right;
-	    if(nod == NULL) break;
-	    after = nod->j;
-	    int spaces = after - before;
-	    for(int s=0; s<spaces; s++) cout <<" ";
-	  }
-	  cout<<endl;
+		while(nod != NULL){
+			cout <<" i -> "<< nod->i <<" | j -> "<< nod->j<<" | value -> "<< nod->value <<endl;
+			nod = nod->right;
+		}
 	}
 }
 
