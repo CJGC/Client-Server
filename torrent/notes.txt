@@ -1,0 +1,9 @@
+-> Index
+-> Node (peers)
+-> tracker -> DHT -> Chord
+   sets->   K     <-   A U B
+
+Algorithms
+Chord
+sha1
+sha256
