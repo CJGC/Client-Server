@@ -2,6 +2,9 @@
 #include <thread>
 #include <cmath>
 #include "graphReader2.hh"
+#include <mutex>
+
+mutex letmeWrite;
 
 void show(vec* graph){
 	/* it will show the graph */
@@ -53,6 +56,7 @@ void pChunk(vec* graph,vec* result,uint nodes,uint ini,uint end){
 			node *pc = graph[1][j]; // pointer to col
 			uint min = _min(pr,pc);
 			if(min != numeric_limits<uint>::max()){
+				lock_guard<mutex> guard(letmeWrite);
 				node *newNod = buildNode(i,j,min);
 				linkNode(result,newNod);
 			}
