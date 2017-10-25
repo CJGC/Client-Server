@@ -103,6 +103,18 @@ void linkNode(vec* nodes,node* newNod){
   if(!linkToDown(nodes,newNod)){delete newNod; return;}
 }
 
+void makeCopy(vec* nodesCp,vec* nodes){
+	/* it will make a copy of nodes into nodesCp */
+	for(node *nod : nodes[0]){
+		node *current = nod;
+		while(current != NULL){
+			node *newNod = buildNode(current->i,current->j,current->value);
+			linkNode(nodesCp,newNod);
+			current = current->right;
+		}
+	}
+}
+
 void destroyNodes(vec* nodes){
   /* it will destroy all linked nodes */
   for(node* nod : nodes[0]){
