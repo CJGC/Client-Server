@@ -18,7 +18,7 @@ void show(vec* graph){
 }
 
 void merge(vec* graph,vec* result){
-	/* it will merge graph with result in finished iteration */
+	/* it will merge two graphs */
 	for(node *n : result[0]){
 		node *nod = n, *next;
 		while(nod != NULL){
@@ -47,13 +47,13 @@ uint _min(node* pr,node* pc){
 	return min;
 }
 
-void pChunk(vec* graph,vec* result,uint nodes,uint ini,uint end){
+void pChunk(vec* graphA,vec* graphB,vec* result,uint nodes,uint ini,uint end){
 	/* it will process a chunk of data by a thread */
 	for(uint i=ini; i<=end && i<nodes; i++)
 		for(uint j=0; j<nodes; j++){
 			if(i == j) continue;
-			node *pr = graph[0][i]; // pointer to row
-			node *pc = graph[1][j]; // pointer to col
+			node *pr = graphA[0][i]; // pointer to row
+			node *pc = graphB[1][j]; // pointer to col
 			uint min = _min(pr,pc);
 			if(min != numeric_limits<uint>::max()){
 				lock_guard<mutex> guard(letmeWrite);
@@ -63,7 +63,7 @@ void pChunk(vec* graph,vec* result,uint nodes,uint ini,uint end){
 		}
 }
 
-void buildResult(vec* graph, vec* result,uint nodes){
+void multiply(vec* graphA,vec* graphB, vec* result,uint nodes){
 	/* it will simulate an iteration of A diamond algorithm by chunks */
 	uint threadsAmount = 7, ti = 0, i = 0, actiThreads = 0;
 	thread t[threadsAmount];
@@ -75,7 +75,7 @@ void buildResult(vec* graph, vec* result,uint nodes){
 		for(ti=0, i; ti<threadsAmount && pendRows > 0; ti++,i++,actiThreads++){
 			uint end = (i+1)*chunk - 1;
 			uint ini = end - chunk + 1;
-			t[ti] = thread(pChunk,graph,result,nodes,ini,end);
+			t[ti] = thread(pChunk,graphA,graphB,result,nodes,ini,end);
 			pendRows -= chunk;
 		}
 		for(ti=0; ti<actiThreads; ti++) t[ti].join();
@@ -84,25 +84,42 @@ void buildResult(vec* graph, vec* result,uint nodes){
 
 }
 
-void Adiamond(vec* graph){
+void Adiamond(vec* graph,uint n,uint nodes){
 	/* it will simulate A diamond algorithm using a vector of linked list */
-	uint nodes = graph[0].size();
-	int steeps = nodes-1;
-	do{
-		vec result[2];
-		result[0].resize(nodes);
-		result[1].resize(nodes);
-		buildResult(graph,result,nodes);
+	vec result[2];
+	result[0].resize(nodes);
+	result[1].resize(nodes);
+	if(n == 1){
+		multiply(graph,graph,result,nodes);
 		merge(graph,result);
-		steeps--;
-	}while(steeps > 0);
+		return;
+	}
+	if(n % 2){
+		vec copiedGraph[2];
+		copiedGraph[1].resize(nodes);
+		copiedGraph[0].resize(nodes);
+		makeCopy(copiedGraph,graph);
+		multiply(graph,graph,result,nodes);
+		merge(graph,result);
+		result[0].clear(); result[1].clear();
+		result[0].resize(nodes); result[1].resize(nodes);
+		Adiamond(graph,(n-1)/2,nodes);
+		multiply(graph,copiedGraph,result,nodes);
+		merge(graph,result);
+		destroyNodes(copiedGraph);
+		return;
+	}
+	multiply(graph,graph,result,nodes);
+	merge(graph,result);
+	Adiamond(graph,n/2,nodes);
 }
 
 int main(int argc, char const **argv){
 	if(argc != 2){cerr << "Usage <"<<argv[0]<<"> <graph path>"<<'\n'; return -1;}
 	vec graph[2];
 	loadgraph(argv[1],graph);
-	Adiamond(graph);
+	uint nodes = graph[0].size();
+	Adiamond(graph,nodes,nodes);
 	show(graph);
 	destroyNodes(graph);
 	return 0;
