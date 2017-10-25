@@ -19,20 +19,20 @@ node* buildNode(uint i,uint j,uint value){
   return nod;
 }
 
-bool linkToRight(vec* nodes,node* newNod){
+bool linkToRight(vec* graph,node* newNod){
   /* linking horizontally (building a row) if success link newNod */
   uint i = newNod->i, j = newNod->j;
 
   // linking first element of row vector
-  node *nod = nodes[0][i]; // row
-  if(nod == NULL){nodes[0][i] = newNod; return true;}
-  if(nodes[0][i]->j == j){
-    nodes[0][i]->value = newNod->value;
+  node *nod = graph[0][i]; // row
+  if(nod == NULL){graph[0][i] = newNod; return true;}
+  if(graph[0][i]->j == j){
+    graph[0][i]->value = newNod->value;
     return false;
   }
-  if(nodes[0][i]->j > j){
-    node *aux = nodes[0][i];
-    nodes[0][i] = newNod;
+  if(graph[0][i]->j > j){
+    node *aux = graph[0][i];
+    graph[0][i] = newNod;
     newNod->right = aux;
     return true;
   }
@@ -58,20 +58,20 @@ bool linkToRight(vec* nodes,node* newNod){
 
 }
 
-bool linkToDown(vec* nodes,node* newNod){
+bool linkToDown(vec* graph,node* newNod){
   /* linking vertically (building a col) if success link newNod */
   uint i = newNod->i, j = newNod->j;
 
   // linking first element of col vector
-  node *nod = nodes[1][j]; // col
-  if(nod == NULL){nodes[1][j] = newNod; return true;}
-  if(nodes[1][j]->i == i){
-    nodes[1][j]->value = newNod->value;
+  node *nod = graph[1][j]; // col
+  if(nod == NULL){graph[1][j] = newNod; return true;}
+  if(graph[1][j]->i == i){
+    graph[1][j]->value = newNod->value;
     return false;
   }
-  if(nodes[1][j]->i > i){
-    node *aux = nodes[1][j];
-    nodes[1][j] = newNod;
+  if(graph[1][j]->i > i){
+    node *aux = graph[1][j];
+    graph[1][j] = newNod;
     newNod->down = aux;
     return true;
   }
@@ -97,27 +97,52 @@ bool linkToDown(vec* nodes,node* newNod){
 
 }
 
-void linkNode(vec* nodes,node* newNod){
+void linkNode(vec* graph,node* newNod){
   /* it will link a node to the right and down respectively */
-  if(!linkToRight(nodes,newNod)){delete newNod; return;}
-  if(!linkToDown(nodes,newNod)){delete newNod; return;}
+  if(!linkToRight(graph,newNod)){delete newNod; return;}
+  if(!linkToDown(graph,newNod)){delete newNod; return;}
 }
 
-void makeCopy(vec* nodesCp,vec* nodes){
-	/* it will make a copy of nodes into nodesCp */
-	for(node *nod : nodes[0]){
+void show(vec* graph){
+	/* it will show the graph */
+	for(node *n : graph[0]){
+	  node *nod = n;
+		while(nod != NULL){
+			cout <<" i -> "<< nod->i <<" | j -> "<< nod->j<<" | value -> "<< nod->value <<endl;
+			nod = nod->right;
+		}
+	}
+}
+
+void merge(vec* destGraph,vec* sourcGraph){
+	/* it will merge two graphs */
+	for(node *n : sourcGraph[0]){
+		node *nod = n, *next;
+		while(nod != NULL){
+			next = nod->right;
+			nod->right = NULL;
+			nod->down = NULL;
+			linkNode(destGraph,nod);
+			nod = next;
+		}
+	}
+}
+
+void makeCopy(vec* destGraph,vec* sourcGraph){
+	/* it will make a copy of source graph */
+	for(node *nod : sourcGraph[0]){
 		node *current = nod;
 		while(current != NULL){
 			node *newNod = buildNode(current->i,current->j,current->value);
-			linkNode(nodesCp,newNod);
+			linkNode(destGraph,newNod);
 			current = current->right;
 		}
 	}
 }
 
-void destroyNodes(vec* nodes){
-  /* it will destroy all linked nodes */
-  for(node* nod : nodes[0]){
+void destroyGraph(vec* graph){
+  /* it will destroy a graph */
+  for(node* nod : graph[0]){
     node *current = nod;
     while(current != NULL){
       node *next = current->right;
