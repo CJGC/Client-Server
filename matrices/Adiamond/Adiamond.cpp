@@ -1,35 +1,10 @@
 #include <limits>
 #include <thread>
-#include <cmath>
 #include "graphReader2.hh"
+#include "timer.hh"
 #include <mutex>
 
-mutex letmeWrite;
-
-void show(vec* graph){
-	/* it will show the graph */
-	for(node *n : graph[0]){
-	  node *nod = n;
-		while(nod != NULL){
-			cout <<" i -> "<< nod->i <<" | j -> "<< nod->j<<" | value -> "<< nod->value <<endl;
-			nod = nod->right;
-		}
-	}
-}
-
-void merge(vec* graph,vec* result){
-	/* it will merge two graphs */
-	for(node *n : result[0]){
-		node *nod = n, *next;
-		while(nod != NULL){
-			next = nod->right;
-			nod->right = NULL;
-			nod->down = NULL;
-			linkNode(graph,nod);
-			nod = next;
-		}
-	}
-}
+mutex letmeLink;
 
 uint _min(node* pr,node* pc){
 	/* it will find the min value between pr row and pc col */
@@ -47,7 +22,7 @@ uint _min(node* pr,node* pc){
 	return min;
 }
 
-void pChunk(vec* graphA,vec* graphB,vec* result,uint nodes,uint ini,uint end){
+void pChunk(vec* graphA,vec* graphB,vec* result,const uint& nodes,uint ini,uint end){
 	/* it will process a chunk of data by a thread */
 	for(uint i=ini; i<=end && i<nodes; i++)
 		for(uint j=0; j<nodes; j++){
@@ -56,18 +31,18 @@ void pChunk(vec* graphA,vec* graphB,vec* result,uint nodes,uint ini,uint end){
 			node *pc = graphB[1][j]; // pointer to col
 			uint min = _min(pr,pc);
 			if(min != numeric_limits<uint>::max()){
-				lock_guard<mutex> guard(letmeWrite);
+				lock_guard<mutex> guard(letmeLink);
 				node *newNod = buildNode(i,j,min);
 				linkNode(result,newNod);
 			}
 		}
 }
 
-void multiply(vec* graphA,vec* graphB, vec* result,uint nodes){
+void multiply(vec* graphA,vec* graphB, vec* result,const uint& nodes){
 	/* it will simulate an iteration of A diamond algorithm by chunks */
 	uint threadsAmount = 7, ti = 0, i = 0, actiThreads = 0;
 	thread t[threadsAmount];
-	uint chunk = floor((double)nodes/threadsAmount);
+	uint chunk = nodes/threadsAmount;
 	int pendRows = nodes;
 	if(!chunk) chunk = 1;
 
@@ -75,7 +50,7 @@ void multiply(vec* graphA,vec* graphB, vec* result,uint nodes){
 		for(ti=0, i; ti<threadsAmount && pendRows > 0; ti++,i++,actiThreads++){
 			uint end = (i+1)*chunk - 1;
 			uint ini = end - chunk + 1;
-			t[ti] = thread(pChunk,graphA,graphB,result,nodes,ini,end);
+			t[ti] = thread(pChunk,graphA,graphB,result,ref(nodes),ini,end);
 			pendRows -= chunk;
 		}
 		for(ti=0; ti<actiThreads; ti++) t[ti].join();
@@ -84,16 +59,12 @@ void multiply(vec* graphA,vec* graphB, vec* result,uint nodes){
 
 }
 
-void Adiamond(vec* graph,uint n,uint nodes){
+void Adiamond(vec* graph,uint n,const uint& nodes){
 	/* it will simulate A diamond algorithm using a vector of linked list */
 	vec result[2];
 	result[0].resize(nodes);
 	result[1].resize(nodes);
-	if(n == 1){
-		multiply(graph,graph,result,nodes);
-		merge(graph,result);
-		return;
-	}
+	if(n == 1) return;
 	if(n % 2){
 		vec copiedGraph[2];
 		copiedGraph[1].resize(nodes);
@@ -106,7 +77,7 @@ void Adiamond(vec* graph,uint n,uint nodes){
 		Adiamond(graph,(n-1)/2,nodes);
 		multiply(graph,copiedGraph,result,nodes);
 		merge(graph,result);
-		destroyNodes(copiedGraph);
+		destroyGraph(copiedGraph);
 		return;
 	}
 	multiply(graph,graph,result,nodes);
@@ -121,6 +92,6 @@ int main(int argc, char const **argv){
 	uint nodes = graph[0].size();
 	Adiamond(graph,nodes,nodes);
 	show(graph);
-	destroyNodes(graph);
+	destroyGraph(graph);
 	return 0;
 }
