@@ -30,7 +30,7 @@ void loadgraph(str fileName,vec* graph){
       graph[1].resize(nodes); // col vector
       cout << "Graph with " << nodes << " nodes" << endl;
     }
-    else if(line[0] == 'e'){
+    else if(line[0] == 'e' || line[0] == 'a'){
       char op;
       uint i,j, weight = 1;
       iss >> op >> i >> j >> weight;
