@@ -1,8 +1,10 @@
+#include <stdlib.h>
 #include <limits>
 #include <thread>
+#include <mutex>
 #include "graphReader2.hh"
 #include "timer.hh"
-#include <mutex>
+#include "devStand.hh"
 
 mutex letmeLink;
 
@@ -85,13 +87,29 @@ void Adiamond(vec* graph,uint n,const uint& nodes){
 	Adiamond(graph,n/2,nodes);
 }
 
+void exeTimes(char const** argv){
+	/* it will execute Adiamond algorithm */
+	vector<long> runTimes;
+	uint _times = atoi(argv[2]);
+	runTimes.resize(_times);
+
+	for(uint t = _times, i = 0; t > 0; t--,i++){
+		vec graph[2];
+		loadgraph(argv[1],graph);
+		uint nodes = graph[0].size();
+		Timer timer("Adiamond.cpp");
+		Adiamond(graph,nodes,nodes);
+		runTimes[i] = timer.elapsed();
+		destroyGraph(graph);
+	}
+
+	cout<<"Elapsed time (seconds) = "<< arithMean<long>(runTimes)/1000.0<<endl;
+	cout<<"Standard deviation = "<< stdDev<long>(runTimes)<<endl;
+}
+
 int main(int argc, char const **argv){
-	if(argc != 2){cerr << "Usage <"<<argv[0]<<"> <graph path>"<<'\n'; return -1;}
-	vec graph[2];
-	loadgraph(argv[1],graph);
-	uint nodes = graph[0].size();
-	Adiamond(graph,nodes,nodes);
-	show(graph);
-	destroyGraph(graph);
+	if(argc != 3){cerr << "Usage <"<<argv[0]<<"> <graph path> <times>"<<'\n'; return -1;}
+	exeTimes(argv);
+	//show(graph);
 	return 0;
 }
