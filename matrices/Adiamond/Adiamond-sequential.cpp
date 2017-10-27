@@ -68,14 +68,11 @@ void exeTimes(char const** argv){
 	runTimes.resize(_times);
 
 	for(uint t = _times, i = 0; t > 0; t--,i++){
-		vec graph[2], result[2];
+		vec graph[2];
 		loadgraph(argv[1],graph);
 		uint nodes = graph[0].size();
-		result[0].resize(nodes); result[1].resize(nodes);
-		Timer timer("Adiamond.cpp");
-		multiply(graph,graph,result,nodes);
-		merge(graph,result);
-		//Adiamond(graph,nodes,nodes);
+		Timer timer("Adiamond-sequential.cpp");
+		Adiamond(graph,nodes,nodes);
 		runTimes[i] = timer.elapsed();
 		//show(graph);
 		destroyGraph(graph);
