@@ -1,12 +1,12 @@
 #include <stdlib.h>
 #include <limits>
 #include <thread>
-#include <mutex>
+//#include <mutex>
 #include "graphReader2.hh"
 #include "timer.hh"
 #include "devStand.hh"
 
-mutex letmeLink;
+//mutex letmeLink;
 
 uint _min(node* pr,node* pc){
 	/* it will find the min value between pr row and pc col */
@@ -33,7 +33,7 @@ void pChunk(vec* graphA,vec* graphB,vec* result,const uint& nodes,uint ini,uint 
 			node *pc = graphB[1][j]; // pointer to col
 			uint min = _min(pr,pc);
 			if(min != numeric_limits<uint>::max()){
-				lock_guard<mutex> guard(letmeLink);
+				//lock_guard<mutex> guard(letmeLink);
 				node *newNod = buildNode(i,j,min);
 				linkNode(result,newNod);
 			}
