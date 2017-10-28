@@ -1,4 +1,4 @@
 Processor i5-4570 CPU @ 3.20GHz with 4 cores
 
-Secuencial version -> 51,484833333 seconds
-Parallel version -> 16,157616667 seconds
+Sequential version -> 51,484833333 minutes 
+Parallel version -> 16,157616667 minutes
