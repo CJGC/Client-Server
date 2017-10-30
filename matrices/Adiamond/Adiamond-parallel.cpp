@@ -100,6 +100,7 @@ void exeTimes(char const** argv){
 		Timer timer("Adiamond.cpp");
 		Adiamond(graph,nodes,nodes);
 		runTimes[i] = timer.elapsed();
+		show(graph);
 		destroyGraph(graph);
 	}
 
@@ -110,6 +111,5 @@ void exeTimes(char const** argv){
 int main(int argc, char const **argv){
 	if(argc != 3){cerr << "Usage <"<<argv[0]<<"> <graph path> <times>"<<'\n'; return -1;}
 	exeTimes(argv);
-	//show(graph);
 	return 0;
 }
