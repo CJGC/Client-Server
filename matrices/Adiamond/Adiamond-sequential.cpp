@@ -36,7 +36,7 @@ void multiply(vec* graphA,vec* graphB,vec* result,const uint& nodes){
 }
 
 void Adiamond(vec* graph,uint n,const uint& nodes){
-	/* it will simulate A diamond algorithm using a vector of linked list */
+	/* it will simulate A diamond algorithm using a linked lists vector */
 	vec result[2];
 	result[0].resize(nodes);
 	result[1].resize(nodes);
@@ -62,7 +62,7 @@ void Adiamond(vec* graph,uint n,const uint& nodes){
 }
 
 void exeTimes(char const** argv){
-	/* it will execute Adiamond algorithm */
+	/* it will execute Adiamond algorithm several times */
 	vector<long> runTimes;
 	uint _times = atoi(argv[2]);
 	runTimes.resize(_times);
