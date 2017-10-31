@@ -20,10 +20,10 @@ node* buildNode(uint i,uint j,uint value){
 }
 
 bool linkToRight(vec* graph,node* newNod){
-  /* linking horizontally (building a row) if success link newNod */
+  /* it will try to link horizontally (building a row) */
   uint i = newNod->i, j = newNod->j;
 
-  // linking first element of row vector
+  // linking first node to the rows vector
   node *nod = graph[0][i]; // row
   if(nod == NULL){graph[0][i] = newNod; return true;}
   if(graph[0][i]->j == j){
@@ -37,7 +37,7 @@ bool linkToRight(vec* graph,node* newNod){
     return true;
   }
 
-  // linking different elements to the first one of the row vector
+  // linking the rest nodes to the row vector
   while(1){
     if(nod->right == NULL){
       nod->right = newNod;
@@ -59,10 +59,10 @@ bool linkToRight(vec* graph,node* newNod){
 }
 
 bool linkToDown(vec* graph,node* newNod){
-  /* linking vertically (building a col) if success link newNod */
+  /* it will try to link vertically (building a col)  */
   uint i = newNod->i, j = newNod->j;
 
-  // linking first element of col vector
+  // linking first node to the col vector
   node *nod = graph[1][j]; // col
   if(nod == NULL){graph[1][j] = newNod; return true;}
   if(graph[1][j]->i == i){
@@ -76,7 +76,7 @@ bool linkToDown(vec* graph,node* newNod){
     return true;
   }
 
-  // linking different elements to the first one of the col vector
+  // linking the rest nodes to the col vector
   while(1){
     if(nod->down == NULL){
       nod->down = newNod;
@@ -98,7 +98,7 @@ bool linkToDown(vec* graph,node* newNod){
 }
 
 void linkNode(vec* graph,node* newNod){
-  /* it will link a node to the right and down respectively */
+  /* it will link a node with row and col vector espectively */
   if(!linkToRight(graph,newNod)){delete newNod; return;}
   if(!linkToDown(graph,newNod)){delete newNod; return;}
 }
