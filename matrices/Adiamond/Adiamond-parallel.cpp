@@ -1,12 +1,9 @@
 #include <stdlib.h>
 #include <limits>
 #include <thread>
-//#include <mutex>
 #include "graphReader2.hh"
 #include "timer.hh"
 #include "devStand.hh"
-
-//mutex letmeLink;
 
 uint _min(node* pr,node* pc){
 	/* it will find the min value between pr row and pc col */
@@ -33,7 +30,6 @@ void pChunk(vec* graphA,vec* graphB,vec* result,const uint& nodes,uint ini,uint 
 			node *pc = graphB[1][j]; // pointer to col
 			uint min = _min(pr,pc);
 			if(min != numeric_limits<uint>::max()){
-				//lock_guard<mutex> guard(letmeLink);
 				node *newNod = buildNode(i,j,min);
 				linkNode(result,newNod);
 			}
@@ -41,7 +37,7 @@ void pChunk(vec* graphA,vec* graphB,vec* result,const uint& nodes,uint ini,uint 
 }
 
 void multiply(vec* graphA,vec* graphB, vec* result,const uint& nodes){
-	/* it will simulate an iteration of A diamond algorithm by chunks */
+	/* it will simulate an iteration of A diamond algorithm in chunks */
 	uint threadsAmount = 7, ti = 0, i = 0, actiThreads = 0;
 	thread t[threadsAmount];
 	uint chunk = nodes/threadsAmount;
@@ -62,7 +58,7 @@ void multiply(vec* graphA,vec* graphB, vec* result,const uint& nodes){
 }
 
 void Adiamond(vec* graph,uint n,const uint& nodes){
-	/* it will simulate A diamond algorithm using a vector of linked list */
+	/* it will simulate A diamond algorithm using a linked lists vector */
 	vec result[2];
 	result[0].resize(nodes);
 	result[1].resize(nodes);
@@ -88,12 +84,12 @@ void Adiamond(vec* graph,uint n,const uint& nodes){
 }
 
 void exeTimes(char const** argv){
-	/* it will execute Adiamond algorithm */
+	/* it will execute Adiamond algorithm several times */
 	vector<long> runTimes;
-	uint _times = atoi(argv[2]);
-	runTimes.resize(_times);
+	uint times = atoi(argv[2]);
+	runTimes.resize(times);
 
-	for(uint t = _times, i = 0; t > 0; t--,i++){
+	for(uint t = times, i = 0; t > 0; t--,i++){
 		vec graph[2];
 		loadgraph(argv[1],graph);
 		uint nodes = graph[0].size();
