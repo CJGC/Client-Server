@@ -7,3 +7,6 @@ Algorithms
 Chord
 sha1
 sha256
+
+Programa que escuche por socket, todo lo que llegue por ahí lo imprime (nombre del nodo)
+Crear una función que genere los identificadores "getId(bytes) -> sha1 o sha256 de los bytes (numero aleatorio de una distribución uniforme entre un conjunto de números 'rango grandes')"
