@@ -2,8 +2,10 @@
 -> Node (peers)
 -> tracker -> DHT -> Chord
    sets->   K     <-   A U B
-
+   
+-----------------------------------------
 Algorithms
+K-Means
 Chord
 sha1
 sha256
@@ -19,4 +21,7 @@ Map/Reduce
 
   (map (1 2 3 4 5) lamda1)
        (1 4 9 16 25 )
+       
+
+
 
