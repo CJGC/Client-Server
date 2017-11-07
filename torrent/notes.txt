@@ -1,26 +1,24 @@
--> Index
 -> Node (peers)
--> tracker -> DHT -> Chord
-   sets->   K     <-   A U B
-   
------------------------------------------
-Algorithms
-K-Means
-Chord
-sha1
-sha256
+-> tracker -> DHT (Distributed Hash Table)
+-> A U B will form K set
 
-Programa que escuche por socket, todo lo que llegue por ahí lo imprime (nombre del nodo)
-Crear una función que genere los identificadores "getId(bytes) -> sha1 o sha256 de los bytes (numero aleatorio de una distribución uniforme entre un conjunto de números 'rango grandes')"
+--------------- Algorithms ---------------
+-> Chord
+-> sha1 - http://www.metamorphosite.com/one-way-hash-encryption-sha1-data-software
+-> sha256
+-> K-Means
+-> Map/Reduce
 
+--------------- Homework ---------------
+-> build listener node, it must print ingoing node ID
+-> Build sha1 algorithm, this capture a string and return a key, 
+   the key could be a random number from uniform distributed set (big range)
 
----------------------------------------
-Map/Reduce
-* Aquitectura distribuida
-    -DFS
-
-  (map (1 2 3 4 5) lamda1)
-       (1 4 9 16 25 )
+-----------notebook --------------------
+-> distributed architecture use a Map/Reduce altorithm
+-> DFS (Deep First Search)
+-> lambda function -> (map (1 2 3 4 5) lamda1)
+    squared numbers -> (1 4 9 16 25 )
        
 
 
