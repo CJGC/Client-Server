@@ -25,6 +25,11 @@ int strOfBinToNum(str _str){
   return decimal;
 }
 
+void fillWithZeros(str& idBin, uint zeroes){
+  /* it will fill with zeroes */
+  for(uint i=0; i<zeroes; i++) idBin.push_back('0');
+}
+
 uint sha1(str id){
   /* it will calculate an unique key for id string */
   int h0 = 0b01100111010001010010001100000001,\
@@ -32,14 +37,22 @@ uint sha1(str id){
       h2 = 0b10011000101110101101110011111110,\
       h3 = 0b00010000001100100101010001110110,\
       h4 = 0b11000011110100101110000111110000;
-  idBin = strToBin(id);
-  int t = h0 & h1;
-  cout << "h0 and h1 = "<< t;
+
+  str idBin = strToBin(id);
+  str IdBinCpy = idBin;
+  idBin.push_back('1');
+  int zeroes = 0, bitsLength = idBin.size();
+  if(bitsLength % 512 <= 448)  zeroes = 448 - bitsLength;
+  else zeroes = 512 - bitsLength + 448;
+  fillWithZeros(idBin,zeroes);
+  cout << idBin << endl;
+  //int t = h0 & h1;
+  //cout << "h0 and h1 = "<< t;
 }
 
 
 int main(int argc, char const *argv[]) {
-  sha1("sha1");
+  sha1("A Test");
   // int bit = 0x02;   //               0010
   // bit |= 1;         // OR  0001 ->   0011
   // bit ^= 1;         // XOR 0001 ->   0010
