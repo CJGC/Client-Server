@@ -42,8 +42,8 @@ uint sha1(str id){
   str IdBinCpy = idBin;
   idBin.push_back('1');
   int zeroes = 0, bitsLength = idBin.size();
-  if(bitsLength % 512 <= 448)  zeroes = 448 - bitsLength;
-  else zeroes = 512 - bitsLength + 448;
+  if(bitsLength % 512 <= 448)  zeroes = 448 - (bitsLength % 512);
+  else zeroes = 448 + 512 - (bitsLength % 512);
   fillWithZeros(idBin,zeroes);
   cout << idBin << endl;
   //int t = h0 & h1;
