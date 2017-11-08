@@ -5,6 +5,7 @@
 #include <string>
 #include <cmath>
 #include <bitset>
+#include <vector>
 
 using namespace std;
 typedef string str;
@@ -34,9 +35,28 @@ void fillWithZeroes(str& strBin, uint zeroes){
   for(uint i=0; i<zeroes; i++) strBin.push_back('0');
 }
 
+void wordsByChunk(uint start,str& strBin,const uint& h0,const uint& h1, \
+          const uint& h2,const uint& h3,const uint& h4){
+  /* it will create 80 words from given chunk (chunks are always 512 bits
+     length) */
+
+  vector<str> words;
+  words.resize(80);
+
+  // breaking 512 chunk in 16 initial words of 32 bits length
+  uint wordsAmount = 512/32;
+  for(uint i=1,w=0; i<=wordsAmount; i++,w++){
+    uint _end = (i*32) + start;
+    uint _start = _end - 32;
+    words[w] = strBin.substr(_start,32);
+  }
+
+
+}
+
 uint sha1(str _str){
   /* it will calculate an unique key for _str */
-  int h0 = 0b01100111010001010010001100000001,\
+  uint h0 = 0b01100111010001010010001100000001,\
       h1 = 0b11101111110011011010101110001001,\
       h2 = 0b10011000101110101101110011111110,\
       h3 = 0b00010000001100100101010001110110,\
@@ -60,7 +80,14 @@ uint sha1(str _str){
   zeroes = 64 - sizeof(strSize)*8;
   fillWithZeroes(strBin,zeroes);
   strBin += bitset<sizeof(strSize)*8>(strSize*8).to_string();
-  cout << strBin.size() <<endl;
+
+  // breaking strBin in 512 chunks
+  uint chunks = strBin.size()/512;
+  for(uint ch=1; ch<=chunks; ch++){
+    uint end = ch*512;
+    uint start = end - 512;
+    wordsByChunk(start,strBin,h0,h1,h2,h3,h4);
+  }
 }
 
 
