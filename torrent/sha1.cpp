@@ -35,8 +35,8 @@ void fillWithZeroes(str& strBin, uint zeroes){
   for(uint i=0; i<zeroes; i++) strBin.push_back('0');
 }
 
-void wordsByChunk(uint start,str& strBin,const uint& h0,const uint& h1, \
-          const uint& h2,const uint& h3,const uint& h4){
+void wordsByChunk(uint start,str& strBin,const str& h0,const str& h1, \
+          const str& h2,const str& h3,const str& h4){
   /* it will create 80 words from given chunk (chunks are always 512 bits
      length) */
 
@@ -74,11 +74,11 @@ void wordsByChunk(uint start,str& strBin,const uint& h0,const uint& h1, \
 
 uint sha1(str _str){
   /* it will calculate an unique key for _str */
-  uint h0 = 0b01100111010001010010001100000001,\
-      h1 = 0b11101111110011011010101110001001,\
-      h2 = 0b10011000101110101101110011111110,\
-      h3 = 0b00010000001100100101010001110110,\
-      h4 = 0b11000011110100101110000111110000;
+  str h0 = "01100111010001010010001100000001",\
+      h1 = "11101111110011011010101110001001",\
+      h2 = "10011000101110101101110011111110",\
+      h3 = "00010000001100100101010001110110",\
+      h4 = "11000011110100101110000111110000";
 
   // ------------- padding section -------------
   // we need to build a 512 bits package, this section will try to build the
