@@ -10,6 +10,24 @@
 using namespace std;
 typedef string str;
 
+void leftRotate(str& strBin,uint bits){
+  /* it will rotate leftmost bits from strBin toward rightmost */
+  str leftmost = strBin.substr(0,bits);
+  strBin.erase(0,bits);
+  strBin.append(leftmost);
+}
+
+void _not(str& strBin){
+  /* it will negate strBin */
+  str newStrBin = "";
+  size_t strBinSize = strBin.size();
+  for(uint c = 0; c < strBinSize; c++){
+    if(strBin[c] == '1') newStrBin.push_back('0');
+    else newStrBin.push_back('1');
+  }
+  strBin = newStrBin;
+}
+
 str strToBin(str _str){
   /* it will turn a string of alphabet letter in 8 bits binary groups for
   each letter */
@@ -51,25 +69,44 @@ void wordsByChunk(uint start,str& strBin,const str& h0,const str& h1, \
     words[w] = strBin.substr(_start,32);
   }
 
-  wordsAmount += 64; // completing wordsAmount to 80 words
+  // completing wordsAmount to 80 words
+  wordsAmount += 64;
   for(uint i=16; i<wordsAmount; i++){
     // performing xor operations
-    uint _xorEd = strBinToNum(words[i-3]) xor strBinToNum(words[i-8]);
-    _xorEd = _xorEd xor strBinToNum(words[i-14]);
-    _xorEd = _xorEd xor strBinToNum(words[i-16]);
+    uint xorEd = strBinToNum(words[i-3]) xor strBinToNum(words[i-8]);
+    xorEd = xorEd xor strBinToNum(words[i-14]);
+    xorEd = xorEd xor strBinToNum(words[i-16]);
 
     // carrying leftmost bit to rightmost bit
-    str newWord = bitset<32>(_xorEd).to_string();
-    char f = newWord[0];
-    newWord.erase(0,1);
-    newWord.push_back(f);
+    str newWord = bitset<32>(xorEd).to_string();
+    leftRotate(newWord,1);
 
     // storing new word
     words[i] = newWord;
   }
 
-  int i = 0;
-  for(auto& c : words){cout << i <<": "<< c << endl; i++;}
+  // performing four choices, each 20 iterations will choose a different \
+    function
+  str A = h0, B = h1, C = h2, D = h3, E = h4, F = "", K = "";
+  for(uint w=0; w<wordsAmount; w++){
+    if(w < 20){
+      funct1(); // F = (B AND C) OR (!B AND D)
+      K = "01011010100000100111100110011001";
+    }
+    else if(w >= 20 && w < 40){
+      funct2(); // F = B XOR C XOR D
+      K = "01101110110110011110101110100001";
+    }
+    else if(w >= 40 && w < 60){
+      funct3(); // F = (B AND C) OR (B AND D) OR (C AND D)
+      K = "10001111000110111011110011011100";
+    }
+    else{
+      funct2(); //F = B XOR C XOR D
+      K = "11001010011000101100000111010110";
+    }
+    D = C; leftRotate(B,30); C = B; B = A; //A = temp;
+  }
 }
 
 uint sha1(str _str){
