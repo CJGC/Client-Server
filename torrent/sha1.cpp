@@ -22,9 +22,9 @@ str strToBin(str _str){
   return binary;
 }
 
-int strBinToNum(str _str){
+uint strBinToNum(str _str){
   /* it will turn a string of binary numbers to decimal value */
-  int decimal = 0;
+  uint decimal = 0;
   for(int i = _str.size()-1, exponent = 0; i>= 0; i--, exponent++)
     if(_str[i] == '1') decimal += pow(2,exponent);
   return decimal;
@@ -51,7 +51,25 @@ void wordsByChunk(uint start,str& strBin,const uint& h0,const uint& h1, \
     words[w] = strBin.substr(_start,32);
   }
 
+  wordsAmount += 64; // completing wordsAmount to 80 words
+  for(uint i=16; i<wordsAmount; i++){
+    // performing xor operations
+    uint _xorEd = strBinToNum(words[i-3]) xor strBinToNum(words[i-8]);
+    _xorEd = _xorEd xor strBinToNum(words[i-14]);
+    _xorEd = _xorEd xor strBinToNum(words[i-16]);
 
+    // carrying leftmost bit to rightmost bit
+    str newWord = bitset<32>(_xorEd).to_string();
+    char f = newWord[0];
+    newWord.erase(0,1);
+    newWord.push_back(f);
+
+    // storing new word
+    words[i] = newWord;
+  }
+
+  int i = 0;
+  for(auto& c : words){cout << i <<": "<< c << endl; i++;}
 }
 
 uint sha1(str _str){
