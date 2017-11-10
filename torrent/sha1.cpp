@@ -156,7 +156,7 @@ void processChunk(uint start,str& strBin,str& h0,str& h1,str& h2,str& h3, \
 }
 
 str getHex(uint& decimal){
-  /* it will turn decimal number to hexadecimal number */
+  /* it will turn 4 bits decimal number to hexadecimal number */
   str hexVal = "";
   if(decimal > 9) hexVal = (char)(decimal - 10 + 'a');
   else hexVal = to_string(decimal);
@@ -164,7 +164,8 @@ str getHex(uint& decimal){
 }
 
 str turnGroupToHex(str& hi,uint start){
-  /* it will buld a 4 bits group and turn in hexadecimal notation */
+  /* it will build a 4 bits group and turn it in decimal number,
+    then it will turn it hexadecimal number */
   str group = hi.substr(start,4);
   uint decimal = strBinToNum(group);
   return getHex(decimal);
@@ -198,11 +199,11 @@ str turnToHex(str& h0,str& h1,str& h2,str& h3,str& h4){
 
 str sha1(str _str){
   /* it will calculate an unique key for _str */
-  str h0 = "01100111010001010010001100000001";
-  str h1 = "11101111110011011010101110001001";
-  str h2 = "10011000101110101101110011111110";
-  str h3 = "00010000001100100101010001110110";
-  str h4 = "11000011110100101110000111110000";
+  str h0 = "01100111010001010010001100000001", \
+      h1 = "11101111110011011010101110001001", \
+      h2 = "10011000101110101101110011111110", \
+      h3 = "00010000001100100101010001110110", \
+      h4 = "11000011110100101110000111110000";
 
   // ------------- padding section -------------
   // we need to build a 512 bits package, this section will try to build the
@@ -231,7 +232,7 @@ str sha1(str _str){
     processChunk(start,strBin,h0,h1,h2,h3,h4);
   }
 
-  // building hexadecimal notation with hn values
+  // building hexadecimalnumber with hn values
   return turnToHex(h0,h1,h2,h3,h4);
 }
 
