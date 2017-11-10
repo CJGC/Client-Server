@@ -224,7 +224,7 @@ str sha1(str _str){
   fillWithZeroes(strBin,zeroes);
   strBin += bitset<sizeof(strSize)*8>(strSize*8).to_string();
 
-  // breaking strBin in 512 chunks, each chunk will set hn new values
+  // ---- breaking strBin in 512 chunks, each chunk will set hn new values ----
   uint chunks = strBin.size()/512;
   for(uint ch=1; ch<=chunks; ch++){
     uint end = ch*512;
@@ -232,7 +232,7 @@ str sha1(str _str){
     processChunk(start,strBin,h0,h1,h2,h3,h4);
   }
 
-  // building hexadecimalnumber with hn values
+  // -------------- building hexadecimalnumber with hn values --------------
   return turnToHex(h0,h1,h2,h3,h4);
 }
 
