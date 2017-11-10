@@ -78,10 +78,9 @@ void funct3(const str& B,const str& C,const str& D,str& F){
   F = bitset<32>(or2).to_string();
 }
 
-void wordsByChunk(uint start,str& strBin,const str& h0,const str& h1, \
-          const str& h2,const str& h3,const str& h4){
-  /* it will create 80 words from given chunk (chunks are always 512 bits
-     length) */
+void processChunk(uint start,str& strBin,str& h0,str& h1,str& h2,str& h3, \
+                  str& h4){
+  /* it will process a given chunk (chunks are always 512 bits length) */
 
   vector<str> words;
   words.resize(80);
@@ -110,8 +109,8 @@ void wordsByChunk(uint start,str& strBin,const str& h0,const str& h1, \
     words[i] = newWord;
   }
 
-  // performing four choices, each 20 iterations will choose a different \
-    function
+  // performing binary operations, each 20 iterations will choose a different \
+    operation from a given function
   str A = h0, B = h1, C = h2, D = h3, E = h4, F = "", K = "";
   for(uint w=0; w<wordsAmount; w++){
     if(w < 20){
@@ -139,14 +138,65 @@ void wordsByChunk(uint start,str& strBin,const str& h0,const str& h1, \
     E = D; D = C;
     leftRotate(B,30);
     C = B; B = oldA;
-
     A = bitset<32>(temp).to_string();
-
-    if(w == 79) cout << A <<endl;
   }
+
+  // setting hn values to the next 512 bits chunk
+  ulong uh0 = strBinToNum(h0) + strBinToNum(A);
+  ulong uh1 = strBinToNum(h1) + strBinToNum(B);
+  ulong uh2 = strBinToNum(h2) + strBinToNum(C);
+  ulong uh3 = strBinToNum(h3) + strBinToNum(D);
+  ulong uh4 = strBinToNum(h4) + strBinToNum(E);
+
+  h0 = bitset<32>(uh0).to_string();
+  h1 = bitset<32>(uh1).to_string();
+  h2 = bitset<32>(uh2).to_string();
+  h3 = bitset<32>(uh3).to_string();
+  h4 = bitset<32>(uh4).to_string();
 }
 
-uint sha1(str _str){
+str getHex(uint& decimal){
+  /* it will turn decimal number to hexadecimal number */
+  str hexVal = "";
+  if(decimal > 9) hexVal = (char)(decimal - 10 + 'a');
+  else hexVal = to_string(decimal);
+  return hexVal;
+}
+
+str turnGroupToHex(str& hi,uint start){
+  /* it will buld a 4 bits group and turn in hexadecimal notation */
+  str group = hi.substr(start,4);
+  uint decimal = strBinToNum(group);
+  return getHex(decimal);
+}
+
+str breakHi(str& hi){
+  /* it will break each 32 bits length hi value, into 4 bits groups */
+  str hexadecimal = "";
+  size_t hnParts = hi.size()/4;
+  for(uint hnP = 1; hnP <= hnParts; hnP++){
+    uint end = 4*hnP;
+    uint start = end - 4;
+    hexadecimal += turnGroupToHex(hi,start);
+  }
+  return hexadecimal;
+}
+
+str turnToHex(str& h0,str& h1,str& h2,str& h3,str& h4){
+  /* it will concatenate each turned hn value into hexadecimal string */
+  vector<str> hn; hn.resize(5);
+  hn[0] = h0; hn[1] = h1; hn[2] = h2; hn[3] = h3; hn[4] = h4;
+
+  str hexadecimal = "";
+  size_t hnGroupSize = hn.size();
+  for(uint hi=0; hi<hnGroupSize; hi++){
+    hexadecimal += breakHi(hn[hi]);
+  }
+
+  return hexadecimal;
+}
+
+str sha1(str _str){
   /* it will calculate an unique key for _str */
   str h0 = "01100111010001010010001100000001";
   str h1 = "11101111110011011010101110001001";
@@ -173,25 +223,20 @@ uint sha1(str _str){
   fillWithZeroes(strBin,zeroes);
   strBin += bitset<sizeof(strSize)*8>(strSize*8).to_string();
 
-  // breaking strBin in 512 chunks
+  // breaking strBin in 512 chunks, each chunk will set hn new values
   uint chunks = strBin.size()/512;
   for(uint ch=1; ch<=chunks; ch++){
     uint end = ch*512;
     uint start = end - 512;
-    wordsByChunk(start,strBin,h0,h1,h2,h3,h4);
+    processChunk(start,strBin,h0,h1,h2,h3,h4);
   }
+
+  // building hexadecimal notation with hn values
+  return turnToHex(h0,h1,h2,h3,h4);
 }
 
 
 int main(int argc, char const *argv[]) {
-  sha1("A Test");
-  // int bit = 0x02;   //               0010
-  // bit |= 1;         // OR  0001 ->   0011
-  // bit ^= 1;         // XOR 0001 ->   0010
-  // bit ^= 7;         // XOR 0111 ->   0101
-  // bit &= 14;        // AND 1110 ->   0100
-  // bit <<= 1;        // LSHIFT 1 ->   1000
-  // bit >>= 2;        // RSHIFT 2 ->   0010
-  // bit = ~bit;       // COMPLEMENT -> 1101
+  cout << sha1("A Test")<<endl;
   return 0;
 }
