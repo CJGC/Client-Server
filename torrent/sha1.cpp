@@ -29,7 +29,7 @@ str _not(const str& strBin){
 }
 
 str strToBin(str _str){
-  /* it will turn a string of alphabet letter in 8 bits binary groups for
+  /* it will turn a string of letters into 8 bits binary group for
   each letter */
   str binary = "";
   size_t strSize = _str.size();
@@ -142,11 +142,11 @@ void processChunk(uint start,str& strBin,str& h0,str& h1,str& h2,str& h3, \
   }
 
   // setting hn values to the next 512 bits chunk
-  ulong uh0 = strBinToNum(h0) + strBinToNum(A);
-  ulong uh1 = strBinToNum(h1) + strBinToNum(B);
-  ulong uh2 = strBinToNum(h2) + strBinToNum(C);
-  ulong uh3 = strBinToNum(h3) + strBinToNum(D);
-  ulong uh4 = strBinToNum(h4) + strBinToNum(E);
+  ulong uh0 = strBinToNum(h0) + strBinToNum(A), \
+        uh1 = strBinToNum(h1) + strBinToNum(B), \
+        uh2 = strBinToNum(h2) + strBinToNum(C), \
+        uh3 = strBinToNum(h3) + strBinToNum(D), \
+        uh4 = strBinToNum(h4) + strBinToNum(E);
 
   h0 = bitset<32>(uh0).to_string();
   h1 = bitset<32>(uh1).to_string();
