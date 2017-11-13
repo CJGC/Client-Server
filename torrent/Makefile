@@ -10,4 +10,4 @@ hwprinter: nodes-printer.cpp
 		$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) nodes-printer.cpp -o nodes-printer.bin -lzmq -lzmqpp
 
 hwtracker: tracker.cpp
-		$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) tracker.cpp -o tracker.bin -lzmq -lzmqpp
+		$(CC) -L$(ZMQ_LIB) -I$(ZMQ_INC) tracker.cpp -o tracker.bin -lzmq -lzmqpp -pthread
