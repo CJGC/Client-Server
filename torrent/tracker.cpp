@@ -4,7 +4,8 @@
 #include <vector>
 #include <map>
 #include <iterator>
-//#include "sha1.hh"
+#include <thread>
+#include "sha1.hh"
 
 using namespace zmqpp;
 using namespace std;
@@ -12,35 +13,40 @@ typedef string str;
 using vec = vector<str>;
 using _map = map<str,vec>;
 
+str localIp = "localhost", remoteIp = "localhost";
+
 class tracker{
 
-
-  /* ---------------- server side ---------------- */
+  /* ---------------- client side ---------------- */
   private:
-    str BeforeIP, BeforePort;
 
   public:
-    tracker(str ip,str port,str id){
+    tracker(str ip,str port,str id,str remoteIp,str remotePort){
       this->ip = ip;
       this->port = port;
       this->id = id;
-      this->AfterId = "none";
-      this->AfterIp = "none";
-      this->AfterPort = "none";
-      this->BeforeIP = "none";
-      this->BeforePort = "none";
+      this->remoteId = "none";
+      this->remoteIp = remoteIp;
+      this->remotePort = remotePort;
       this->amILast = true;
       this->_exit = false;
+    }
+
+    void client(socket& cli){
+      /* it will simulate a cliento into tracker */
+      cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
     }
 
   /* ---------------- server side ---------------- */
   private:
     _map keys;
-    str id, ip, port, AfterId, AfterIp, AfterPort;
+    str id, ip, port, remoteId, remoteIp, remotePort;
     bool amILast, _exit;
 
+  public:
     void server(socket& serv){
       /* it will simulate a sever into tracker */
+      serv.bind("tcp://"+this->ip+":"+this->port);
       message request, reply;
       str op, idc, afIp, afPort;
       bool last;
@@ -66,6 +72,8 @@ class tracker{
 
     }
 
+  private:
+
     void setLast(message& package, bool& last){
       /* it will set up amIlast info */
       amILast = last;
@@ -73,16 +81,16 @@ class tracker{
     }
 
     void setInfo(message& package,str id,str ip,str port){
-      /* it will set up all next node info */
-      AfterId = id;
-      AfterIp = ip;
-      AfterPort = port;
+      /* it will set up all remote node info */
+      remoteId = id;
+      remoteIp = ip;
+      remotePort = port;
       package << "ok";
     }
 
     void getInfo(message& package){
       /* it will get this node and next node info for requester client */
-      str info = id + " " + AfterId + " " + AfterIp + " " + AfterPort;
+      str info = id + " " + remoteId + " " + remoteIp + " " + remotePort;
       package << info;
     }
 
@@ -100,8 +108,8 @@ class tracker{
       /* it will get all belonging keys for requester client */
       str ckeys = ""; // client keys
 
-      if(amILast && id > idc && AfterId == "none"  || \
-        amILast && id > idc && AfterId > idc){
+      if(amILast && id > idc && remoteId == "none"  || \
+        amILast && id > idc && remoteId > idc){
         _map::iterator first = keys.lower_bound(idc);
         _map::iterator last = keys.lower_bound(id);
         splitKeys(first,last,ckeys);
@@ -130,5 +138,11 @@ int main(int argc,const char **argv){
       cerr << "usage "<<argv[0]<<" <string>\n";
       return -1;
     }
+    context s_ctx, c_ctx;
+    socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
+    tracker track(localIp,"5555","none",remoteIp,"7777");
+    thread t(&tracker::server, &track, ref(serv));
+    track.client(cli);
+    t.join();
     return 0;
 }
