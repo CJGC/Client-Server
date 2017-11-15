@@ -82,11 +82,10 @@ class tracker{
     void unbindWithChord(socket& cli){
       /* it will unbind with chord ring */
       message request, answer;
-      str keys, amLast = "false";
+      str keys;
       getKeys(keys);
-      if(this->amILast == "true") amLast = this->amILast;
-      request << "setkeys" << this->remoteId << this->remoteIp \
-              <<this->remotePort << amLast << keys;
+      request << "setinfo" << this->remoteId << this->remoteIp \
+              <<this->remotePort << this->amILast << keys;
       cli.send(request);
       cli.receive(answer);
       this->_exit = true;
@@ -164,21 +163,18 @@ class tracker{
           this->getKeys(reply,cId);
 
         else if(op == "setinfo")
-          this->setInfo(reply,cId,cIp,cPort,last);
+          this->setInfo(reply,cId,cIp,cPort,last,keys);
 
-        else if(op == "setkeys"){
-          this->setKeys(keys);
-          this->setInfo(reply,cId,cIp,cPort,last);
-        }
         serv.send(reply);
       }
 
     }
 
   private:
-    void setInfo(message& package,str id,str ip,str port,str last){
+    void setInfo(message& package,str id,str ip,str port,str last,str keys){
       /* it will set up all remote node info */
       setRemoteInfo(id,ip,port);
+      setKeys(keys);
       this->amILast = last;
       package << "ok";
     }
@@ -186,7 +182,7 @@ class tracker{
     void getInfo(message& package){
       /* it will get this node and next node info for requester client */
        package << this->id << this->remoteId << this->remoteIp \
-               << this->remotePort;
+               << this->remotePort << this->amILast;
     }
 
     void splitKeys(_map::iterator& f, _map::iterator& l, str& ckeys){
