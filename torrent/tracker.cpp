@@ -48,13 +48,22 @@ class tracker{
       this->_exit = false;
     }
 
-    void client(socket& cli){
+    void client(socket& cli,socket& serv){
       /* it will simulate a cliento into tracker */
       searchPos(cli);
       message request, answer;
       str userOp, keys;
+      cout << "type something to exit: ";
       getline(cin,userOp);
+      getKeys(keys);
+      str amLast = "false";
+      if(this->amILast == "true") amLast = this->amILast;
+      request <<" setkeys" << this->remoteId << this->remoteIp \
+              <<this->remotePort << amLast << keys;
+      cli.send(request);
+      cli.receive(answer);
       this->_exit = true;
+      serv.unbind("tcp://"+this->ip+":"+this->port);
     }
 
   private:
@@ -99,7 +108,11 @@ class tracker{
 
     void getKeys(str& keys){
       /* it will put keys into a formatted string for shipping */
-      return;
+      for(auto& item : this->keys){
+        str key = item.first, ownerName = item.second[0], \
+            fileName = item.second[1];
+        keys += key + " " + ownerName + " " + fileName + "$";
+      }
     }
 
   /* ---------------- server side ---------------- */
@@ -125,6 +138,8 @@ class tracker{
         else if(op == "setinfo")
           this->setInfo(reply,cId,cIp,cPort,last);
 
+        else if(op == "setkeys")
+          this->setKeys(keys);
         serv.send(reply);
       }
 
@@ -150,7 +165,7 @@ class tracker{
       for(auto& it = f; it != l;){
         str key = it->first;
         str ownerName = it->second[0], fileName = it->second[1];
-        ckeys += key + " " + ownerName + " " + fileName + "\n";
+        ckeys += key + " " + ownerName + " " + fileName + "$";
         it = keys.erase(it);
       }
     }
@@ -193,7 +208,7 @@ int main(int argc,const char **argv){
     socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
     tracker track(localIp,"5555","none",remoteIp,"7777");
     thread t(&tracker::server, &track, ref(serv));
-    track.client(cli);
+    track.client(cli,serv);
     t.join();
     return 0;
 }
