@@ -17,55 +17,113 @@ str localIp = "localhost", remoteIp = "localhost";
 
 class tracker{
 
-  /* ---------------- client side ---------------- */
+  /* ---- generic methods and attributes, these will be used by
+          client and server side respectively --- */
+
   private:
+    _map keys;
+    str id, ip, port, remoteId, remoteIp, remotePort, amILast;
+
+    void setKeys(str& keys){
+      /* it will set up keys domain */
+      return;
+    }
+
+    void setRemoteInfo(str id,str& ip,str& port){
+      /* it will set up remote info */
+      this->remoteId = id;
+      this->remoteIp = ip;
+      this->remotePort = port;
+    }
+
+  /* ---------------- client side ---------------- */
 
   public:
     tracker(str ip,str port,str id,str remoteIp,str remotePort){
       this->ip = ip;
       this->port = port;
       this->id = id;
-      this->remoteId = "none";
-      this->remoteIp = remoteIp;
-      this->remotePort = remotePort;
-      this->amILast = true;
+      setRemoteInfo("none",remoteIp,remotePort);
+      this->amILast = "true";
       this->_exit = false;
     }
 
     void client(socket& cli){
       /* it will simulate a cliento into tracker */
-      cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
+      searchPos(cli);
+      message request, answer;
+      str userOp, keys;
+      getline(cin,userOp);
+      this->_exit = true;
+    }
+
+  private:
+    void searchPos(socket& cli){
+      /* it will search a position into chord ring */
+      while(true){
+        message request, answer;
+        cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
+        request << "getinfo";
+        cli.send(request);
+        cli.receive(answer);
+        str remtId = "", remtNextId = "", remtNextIp = "", remtNextPort = "",\
+            remtIsLast = "";
+        answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
+               >> remtIsLast;
+
+        if((this->id > remtId && this->id < remtNextId) || remtNextId == "none"\
+            || (remtIsLast == "true" && remtNextId > this->id) ){
+          request << "getKeys";
+          cli.send(request);
+          cli.receive(answer);
+          str keys;
+          answer >> keys;
+          setKeys(keys);
+          if(remtIsLast == "true" && this->id > remtId){
+            this->amILast = "true";
+            remtIsLast = "false";
+          }
+          else this->amILast = "false";
+          request << "setinfo" << this->id << this->ip << this->port \
+                  << remtIsLast << "";
+          cli.send(request);
+          cli.receive(answer);
+          setRemoteInfo(remtNextId,remtNextIp,remtNextPort);
+          break;
+        }
+
+        cli.disconnect("tpc//"+this->remoteIp+":"+this->remotePort);
+        this->remoteIp = remtNextIp; this->remotePort = remtNextPort;
+      }
+    }
+
+    void getKeys(str& keys){
+      /* it will put keys into a formatted string for shipping */
+      return;
     }
 
   /* ---------------- server side ---------------- */
   private:
-    _map keys;
-    str id, ip, port, remoteId, remoteIp, remotePort;
-    bool amILast, _exit;
-
+    bool _exit;
   public:
     void server(socket& serv){
       /* it will simulate a sever into tracker */
       serv.bind("tcp://"+this->ip+":"+this->port);
       message request, reply;
-      str op, idc, afIp, afPort;
-      bool last;
+      str op, cId, cIp, cPort, last, keys;
 
       while(!_exit){
         serv.receive(request);
-        request >> op >> idc >> afIp >> afPort >> last;
+        request >> op >> cId >> cIp >> cPort >> last >> keys;
 
         if(op == "getinfo")
           this->getInfo(reply);
 
         else if(op == "getkeys")
-          this->getKeys(reply,idc);
+          this->getKeys(reply,cId);
 
         else if(op == "setinfo")
-          this->setInfo(reply,idc,afIp,afPort);
-
-        else if(op == "setlast")
-          this->setLast(reply,last);
+          this->setInfo(reply,cId,cIp,cPort,last);
 
         serv.send(reply);
       }
@@ -74,24 +132,17 @@ class tracker{
 
   private:
 
-    void setLast(message& package, bool& last){
-      /* it will set up amIlast info */
-      amILast = last;
-      package << "ok";
-    }
-
-    void setInfo(message& package,str id,str ip,str port){
+    void setInfo(message& package,str id,str ip,str port,str last){
       /* it will set up all remote node info */
-      remoteId = id;
-      remoteIp = ip;
-      remotePort = port;
+      setRemoteInfo(id,ip,port);
+      this->amILast = last;
       package << "ok";
     }
 
     void getInfo(message& package){
       /* it will get this node and next node info for requester client */
-      str info = id + " " + remoteId + " " + remoteIp + " " + remotePort;
-      package << info;
+       package << this->id << this->remoteId << this->remoteIp \
+               << this->remotePort;
     }
 
     void splitKeys(_map::iterator& f, _map::iterator& l, str& ckeys){
@@ -104,28 +155,28 @@ class tracker{
       }
     }
 
-    void getKeys(message& package, str idc){
+    void getKeys(message& package, str cId){
       /* it will get all belonging keys for requester client */
       str ckeys = ""; // client keys
 
-      if(amILast && id > idc && remoteId == "none"  || \
-        amILast && id > idc && remoteId > idc){
-        _map::iterator first = keys.lower_bound(idc);
+      if((this->amILast == "true" && this->id > cId && this->remoteId == "none")\
+      || (this->amILast == "true" && this->id > cId && this->remoteId > cId)){
+        _map::iterator first = keys.lower_bound(cId);
         _map::iterator last = keys.lower_bound(id);
         splitKeys(first,last,ckeys);
         package << ckeys;
         return;
       }
 
-      if(idc > id){
-        _map::iterator first = keys.lower_bound(idc);
+      if(cId > this->id){
+        _map::iterator first = keys.lower_bound(cId);
         _map::iterator last = keys.end();
         splitKeys(first,last,ckeys);
       }
 
-      if(amILast && idc > id){
+      if(this->amILast == "true" && cId > this->id){
         _map::iterator first = keys.begin();
-        _map::iterator last = keys.lower_bound(id);
+        _map::iterator last = keys.lower_bound(this->id);
         splitKeys(first,last,ckeys);
       }
 
