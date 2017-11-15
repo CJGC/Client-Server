@@ -58,7 +58,7 @@ class tracker{
       getKeys(keys);
       str amLast = "false";
       if(this->amILast == "true") amLast = this->amILast;
-      request <<" setkeys" << this->remoteId << this->remoteIp \
+      request << "setkeys" << this->remoteId << this->remoteIp \
               <<this->remotePort << amLast << keys;
       cli.send(request);
       cli.receive(answer);
