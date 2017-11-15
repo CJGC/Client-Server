@@ -24,12 +24,32 @@ class tracker{
     _map keys;
     str id, ip, port, remoteId, remoteIp, remotePort, amILast;
 
-    void setKeys(str& keys){
+    void setKeys(const str& keys){
       /* it will set up keys domain */
-      return;
+      str key = "", ownerName = "", fileName = "", aux = "";
+
+      for(char ch : keys)
+        if(ch == ' ' && key == ""){
+          key = aux;
+          aux = "";
+        }
+        else if(ch == ' ' && ownerName == ""){
+          ownerName = aux;
+          aux = "";
+        }
+        else if(ch == ' ' && fileName == ""){
+          fileName = aux;
+          vec second;
+          second.resize(2);
+          second[0] = ownerName;
+          second[1] = fileName;
+          this->keys[key] = second;
+          key = ""; ownerName = ""; fileName = ""; aux = "";
+        }
+        else aux += ch;
     }
 
-    void setRemoteInfo(str id,str& ip,str& port){
+    void setRemoteInfo(str id,const str& ip,const str& port){
       /* it will set up remote info */
       this->remoteId = id;
       this->remoteIp = ip;
@@ -50,21 +70,20 @@ class tracker{
 
     void client(socket& cli,socket& serv){
       /* it will simulate a cliento into tracker */
-      connect(cli);
+      bindWithChord(cli);
       str userOp;
       cout << "type something to exit: ";
       getline(cin,userOp);
-      disconnect(cli,serv);
+      unbindWithChord(cli);
       serv.unbind("tcp://"+this->ip+":"+this->port);
     }
 
   private:
-    void disconnect(socket& cli){
-      /* it will disconnect from chord ring */
+    void unbindWithChord(socket& cli){
+      /* it will unbind with chord ring */
       message request, answer;
-      str keys;
+      str keys, amLast = "false";
       getKeys(keys);
-      str amLast = "false";
       if(this->amILast == "true") amLast = this->amILast;
       request << "setkeys" << this->remoteId << this->remoteIp \
               <<this->remotePort << amLast << keys;
@@ -73,8 +92,8 @@ class tracker{
       this->_exit = true;
     }
 
-    void connect(socket& cli){
-      /* it will search a position into chord ring */
+    void bindWithChord(socket& cli){
+      /* it will bind with chord ring */
       while(true){
         message request, answer;
         cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
@@ -117,7 +136,7 @@ class tracker{
       for(auto& item : this->keys){
         str key = item.first, ownerName = item.second[0], \
             fileName = item.second[1];
-        keys += key + " " + ownerName + " " + fileName + "$";
+        keys += key + " " + ownerName + " " + fileName + " ";
       }
     }
 
@@ -173,7 +192,7 @@ class tracker{
       for(auto& it = f; it != l;){
         str key = it->first;
         str ownerName = it->second[0], fileName = it->second[1];
-        ckeys += key + " " + ownerName + " " + fileName + "$";
+        ckeys += key + " " + ownerName + " " + fileName + " ";
         it = keys.erase(it);
       }
     }
