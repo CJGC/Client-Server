@@ -105,9 +105,11 @@ class tracker{
         answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
                >> remtIsLast;
 
-        if((this->id > remtId && this->id < remtNextId) || remtNextId == "none"\
-            || (remtIsLast == "true" && remtNextId > this->id) ){
-          request << "getKeys";
+        if( (remtNextId == "none") \
+        || (this->id > remtId && this->id < remtNextId) \
+        || (remtIsLast == "true" && this->id > remtId) \
+        || (remtIsLast == "true" && this->id < remtNextId)){
+          request << "getKeys" << this->id << "" << "" << "" << "";
           cli.send(request);
           cli.receive(answer);
           str keys;
@@ -143,6 +145,7 @@ class tracker{
   /* ---------------- server side ---------------- */
   private:
     bool _exit;
+
   public:
     void server(socket& serv){
       /* it will simulate a sever into tracker */
@@ -173,7 +176,6 @@ class tracker{
     }
 
   private:
-
     void setInfo(message& package,str id,str ip,str port,str last){
       /* it will set up all remote node info */
       setRemoteInfo(id,ip,port);
