@@ -50,11 +50,19 @@ class tracker{
 
     void client(socket& cli,socket& serv){
       /* it will simulate a cliento into tracker */
-      searchPos(cli);
-      message request, answer;
-      str userOp, keys;
+      connect(cli);
+      str userOp;
       cout << "type something to exit: ";
       getline(cin,userOp);
+      disconnect(cli,serv);
+      serv.unbind("tcp://"+this->ip+":"+this->port);
+    }
+
+  private:
+    void disconnect(socket& cli){
+      /* it will disconnect from chord ring */
+      message request, answer;
+      str keys;
       getKeys(keys);
       str amLast = "false";
       if(this->amILast == "true") amLast = this->amILast;
@@ -63,11 +71,9 @@ class tracker{
       cli.send(request);
       cli.receive(answer);
       this->_exit = true;
-      serv.unbind("tcp://"+this->ip+":"+this->port);
     }
 
-  private:
-    void searchPos(socket& cli){
+    void connect(socket& cli){
       /* it will search a position into chord ring */
       while(true){
         message request, answer;
@@ -138,8 +144,10 @@ class tracker{
         else if(op == "setinfo")
           this->setInfo(reply,cId,cIp,cPort,last);
 
-        else if(op == "setkeys")
+        else if(op == "setkeys"){
           this->setKeys(keys);
+          this->setInfo(reply,cId,cIp,cPort,last);
+        }
         serv.send(reply);
       }
 
