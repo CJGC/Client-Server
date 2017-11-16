@@ -5,8 +5,8 @@
 #include <map>
 #include <iterator>
 #include <thread>
-#include "sha1.hh"
-#include "macAddr.hh"
+#include "getMachInfo.hh"
+#include "loadFiles.hh"
 
 using namespace zmqpp;
 using namespace std;
@@ -60,13 +60,14 @@ class tracker{
   /* ---------------- client side ---------------- */
 
   public:
-    tracker(str ip,str port,str id,str remoteIp,str remotePort){
+    tracker(str id,str ip,str port,str remoteIp,str remotePort,str ownFiles){
       this->ip = ip;
       this->port = port;
       this->id = id;
       setRemoteInfo("none",remoteIp,remotePort);
       this->amILast = "true";
       this->_exit = false;
+      setKeys(ownFiles);
     }
 
     void client(socket& cli,socket& serv){
@@ -226,17 +227,15 @@ class tracker{
 };
 
 int main(int argc,const char **argv){
-    if(argc != 2){
-      cerr << "usage "<<argv[0]<<" <string>\n";
-      return -1;
-    }
-    context s_ctx, c_ctx;
-    socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
-    vec mac = macAddr();
-    str id = sha1(mac[0]);
-    tracker track(localIp,"5555",id,remoteIp,"7777");
-    thread t(&tracker::server, &track, ref(serv));
-    track.client(cli,serv);
-    t.join();
-    return 0;
+  str ownFiles = "", id = "";
+  map<str,str> machInfo = getMachInfo();
+  ownFiles = getFiles(machInfo["ip"],"/files");
+  id = sha1(machInfo["mac"]);
+  context s_ctx, c_ctx;
+  socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
+  tracker track(id,localIp,"5555",remoteIp,"7777",ownFiles);
+  thread t(&tracker::server, &track, ref(serv));
+  track.client(cli,serv);
+  t.join();
+  return 0;
 }
