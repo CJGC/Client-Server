@@ -6,6 +6,7 @@
 #include <iterator>
 #include <thread>
 #include "sha1.hh"
+#include "macAddr.hh"
 
 using namespace zmqpp;
 using namespace std;
@@ -231,7 +232,9 @@ int main(int argc,const char **argv){
     }
     context s_ctx, c_ctx;
     socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
-    tracker track(localIp,"5555","none",remoteIp,"7777");
+    vec mac = macAddr();
+    str id = sha1(mac[0]);
+    tracker track(localIp,"5555",id,remoteIp,"7777");
     thread t(&tracker::server, &track, ref(serv));
     track.client(cli,serv);
     t.join();
