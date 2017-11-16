@@ -25,15 +25,16 @@ DIR * openDir(str inputDir){
   return dir;
 }
 
-void getFiles(str& info, str ownerName,str inputDir="/files") {
+str getFiles(str ownerName,str inputDir="/files") {
   /* it will get files name from a given directory */
-
+  str ownFiles = "";
   DIR *dir = openDir(inputDir);
   struct dirent *file;
   while( (file = readdir(dir)) != NULL ){
     str filename = file->d_name;
     str key = sha1(ownerName+":"+filename);
-    info += key + " " + ownerName + " " + filename + " ";
+    ownFiles += key + " " + ownerName + " " + filename + " ";
   }
   closedir(dir);
+  return ownFiles;
 }
