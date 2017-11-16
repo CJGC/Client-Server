@@ -14,7 +14,7 @@ typedef string str;
 using vec = vector<str>;
 using _map = map<str,vec>;
 
-str localIp = "localhost", remoteIp = "localhost";
+str localIp = "*", remoteIp = "localhost";
 
 class tracker{
 
@@ -61,9 +61,9 @@ class tracker{
 
   public:
     tracker(str id,str ip,str port,str remoteIp,str remotePort,str ownFiles){
+      this->id = id;
       this->ip = ip;
       this->port = port;
-      this->id = id;
       setRemoteInfo("none",remoteIp,remotePort);
       this->amILast = "true";
       this->_exit = false;
@@ -84,7 +84,7 @@ class tracker{
     void unbindWithChord(socket& cli){
       /* it will unbind with chord ring */
       message request, answer;
-      str keys;
+      str keys = "";
       getKeys(keys);
       request << "setinfo" << this->remoteId << this->remoteIp \
               <<this->remotePort << this->amILast << keys;
@@ -159,13 +159,13 @@ class tracker{
         request >> op >> cId >> cIp >> cPort >> last >> keys;
 
         if(op == "getinfo")
-          this->getInfo(reply);
+          getInfo(reply);
 
         else if(op == "getkeys")
-          this->getKeys(reply,cId);
+          getKeys(reply,cId);
 
         else if(op == "setinfo")
-          this->setInfo(reply,cId,cIp,cPort,last,keys);
+          setInfo(reply,cId,cIp,cPort,last,keys);
 
         serv.send(reply);
       }
@@ -203,22 +203,22 @@ class tracker{
 
       if((this->amILast == "true" && this->id > cId && this->remoteId == "none")\
       || (this->amILast == "true" && this->id > cId && this->remoteId > cId)){
-        _map::iterator first = keys.lower_bound(cId);
-        _map::iterator last = keys.lower_bound(id);
+        _map::iterator first = this->keys.lower_bound(cId);
+        _map::iterator last = this->keys.lower_bound(id);
         splitKeys(first,last,ckeys);
         package << ckeys;
         return;
       }
 
       if(cId > this->id){
-        _map::iterator first = keys.lower_bound(cId);
-        _map::iterator last = keys.end();
+        _map::iterator first = this->keys.lower_bound(cId);
+        _map::iterator last = this->keys.end();
         splitKeys(first,last,ckeys);
       }
 
       if(this->amILast == "true" && cId > this->id){
-        _map::iterator first = keys.begin();
-        _map::iterator last = keys.lower_bound(this->id);
+        _map::iterator first = this->keys.begin();
+        _map::iterator last = this->keys.lower_bound(this->id);
         splitKeys(first,last,ckeys);
       }
 
