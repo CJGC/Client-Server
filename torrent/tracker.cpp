@@ -25,23 +25,23 @@ class tracker{
 
   private:
     _map keys;
-    str id, ip, port, remoteId, remoteIp, remotePort, amILast, befIp, befPort,\
-        befIpAux, befPortAux;
+    str id, ip, port, remoteId, remoteIp, remotePort, amILast, befIp, befPort;
     mutex ubd; // unbind mutex
     condition_variable cv;
-    bool mustIUbound;
+    bool _exit;
 
   public:
-    void _unbind(socket& cli){
-      /* it will unbind this client with remote server and will bind with other
-      remote server */
-      while(!_exit){
+    void _unbindBef(socket& cli){
+      /* it will unbind this client bef node and will bind with other
+        bef node server */
+      while(true){
         unique_lock<mutex> lock(this->ubd);
-        this->cv.wait(lock,[&]{return this->mustIUbound;});
+        this->cv.wait(lock,[&]{return this->mustIUnbindBef;});
+        if(this->_exit) break;
         cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
         setBefInfo(this->befIpAux,this->befPortAux);
         cli.connect("tcp://"+this->befIp+":"+this->befPort);
-        this->mustIUbound = false;
+        this->mustIUnbindBef = false;
       }
     }
 
@@ -89,16 +89,17 @@ class tracker{
       setRemoteInfo("none",remoteIp,remotePort);
       this->amILast = "true";
       this->_exit = false;
-      this->mustIUbound = false;
+      this->mustIUnbindBef = false;
       setKeys(ownFiles);
     }
 
-    void client(socket& cli,socket& serv){
+    void client(socket& cli){
       /* it will simulate a client into tracker */
       bindWithChord(cli);
       str userOp;
       cout << "type something to exit: ";
       getline(cin,userOp);
+      if(this->_exit) return;
       unbindWithChord(cli);
     }
 
@@ -114,7 +115,7 @@ class tracker{
       cli.receive(answer);
       cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
       cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
-      request << "unbind" <<""<< this->befIp << this->befPort << "" << "";
+      request << "unbindbef" << "" << this->befIp << this->befPort << "" << "";
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
@@ -123,6 +124,7 @@ class tracker{
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->ip+":"+this->port);
+      this->cv.notify_one();
     }
 
     void bindWithChord(socket& cli){
@@ -137,7 +139,10 @@ class tracker{
             remtIsLast = "";
         answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
                >> remtIsLast;
-
+        if(this->id == remtNextId){
+          setBefInfo(this->remoteIp,this->remotePort);
+          break;
+        }
         if( (remtNextId == "none") \
         || (this->id > remtId && this->id < remtNextId) \
         || (remtIsLast == "true" && this->id > remtId) \
@@ -184,7 +189,8 @@ class tracker{
 
   /* ---------------- server side ---------------- */
   private:
-    bool _exit;
+    str befIpAux, befPortAux;
+    bool mustIUnbindBef;
 
   public:
     void server(socket& serv){
@@ -206,8 +212,8 @@ class tracker{
         else if(op == "setinfo")
           setInfo(reply,cId,cIp,cPort,last,keys);
 
-        else if(op == "unbind")
-          unbind(reply,cIp,cPort);
+        else if(op == "unbindbef")
+          unbindBef(reply,cIp,cPort);
 
         else if(op == "disconnect")
           disconnect(reply);
@@ -222,7 +228,8 @@ class tracker{
       /* it will set up all remote node info */
       setRemoteInfo(id,ip,port);
       setKeys(keys);
-      this->amILast = last;
+      if(id > this->id)
+        this->amILast = last;
       package << "ok";
     }
 
@@ -270,13 +277,17 @@ class tracker{
       package << ckeys;
     }
 
-    void unbind(message& package,str ip, str port){
+    void unbindBef(message& package,str ip, str port){
       /* it will request this client to disconnect with bef node */
-      this->befIpAux = ip;
-      this->befPortAux = port;
-      this->mustIUbound = true;
+      if(this->ip != ip && this->port != port){ // if am not alone in ring
+        this->befIpAux = ip;
+        this->befPortAux = port;
+        package << "ok";
+      }
+      else
+        disconnect(package); // if am alone, i will disconnect
+      this->mustIUnbindBef = true;
       this->cv.notify_one();
-      package << "ok";
     }
 
     void disconnect(message& package){
@@ -294,9 +305,9 @@ int main(int argc,const char **argv){
   context s_ctx, c_ctx;
   socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
   tracker track(id,localIp,"5555",remoteIp,"7777",ownFiles);
-  thread t0(&tracker::_unbind, &track, ref(cli));
+  thread t0(&tracker::_unbindBef, &track, ref(cli));
   thread t1(&tracker::server, &track, ref(serv));
-  track.client(cli,serv);
+  track.client(cli);
   t0.join();
   t1.join();
   return 0;
