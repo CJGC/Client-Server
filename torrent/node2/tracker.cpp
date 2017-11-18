@@ -97,8 +97,10 @@ class tracker{
 
     void client(socket& cli){
       /* it will simulate a client into tracker */
-      bindWithChord(cli);
       str userOp;
+      cout <<"type something to connect";
+      getline(cin,userOp);
+      bindWithChord(cli);
       cout << "type something to exit: ";
       getline(cin,userOp);
       if(this->_exit)
