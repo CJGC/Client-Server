@@ -68,7 +68,8 @@ class tracker{
           this->keys[key] = second;
           key = ""; ownerName = ""; fileName = ""; aux = "";
         }
-        else aux += ch;
+        else
+          aux += ch;
     }
 
     void setRemoteInfo(str id,const str& ip,const str& port){
@@ -99,7 +100,8 @@ class tracker{
       str userOp;
       cout << "type something to exit: ";
       getline(cin,userOp);
-      if(this->_exit) return;
+      if(this->_exit)
+        return;
       unbindWithChord(cli);
     }
 
@@ -120,7 +122,7 @@ class tracker{
       cli.receive(answer);
       cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
       cli.connect("tcp://"+this->ip+":"+this->port);
-      request << "disconnect"<<""<<""<<""<<""<<"";
+      request << "disconnect" << "" << "" << "" << "" << "";
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->ip+":"+this->port);
@@ -157,13 +159,21 @@ class tracker{
             this->amILast = "true";
             remtIsLast = "false";
           }
-          else this->amILast = "false";
+          else
+            this->amILast = "false";
           request << "setinfo" << this->id << this->ip << this->port \
                   << remtIsLast << "";
           cli.send(request);
           cli.receive(answer);
           setBefInfo(this->remoteIp,this->remotePort);
           setRemoteInfo(remtNextId,remtNextIp,remtNextPort);
+          cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
+          cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
+          request << "unbindbef" << "" << this->ip << this->port << "" << "";
+          cli.send(request);
+          cli.receive(answer);
+          cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
+          cli.connect("tcp://"+this->befIp+":"+this->befPort);
           break;
         }
 
