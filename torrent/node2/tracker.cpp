@@ -123,12 +123,12 @@ class tracker{
       cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
       cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
       request << "unbindbef" << this->befId << this->befIp << this->befPort \
-              << "" << "";
+              << " " << " ";
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
       cli.connect("tcp://"+this->ip+":"+this->port);
-      request << "disconnect" << "" << "" << "" << "" << "";
+      request << "disconnect" << " " << " " << " " << " " << " ";
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->ip+":"+this->port);
@@ -140,7 +140,7 @@ class tracker{
       while(true){
         message request, answer;
         cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
-        request << "getinfo";
+        request << "getinfo" << " " << " " << " " << " " << " ";
         cli.send(request);
         cli.receive(answer);
         str remtId = "", remtNextId = "", remtNextIp = "", remtNextPort = "",\
@@ -156,7 +156,7 @@ class tracker{
         || (this->id > remtId && this->id < remtNextId) \
         || (remtIsLast == "true" && this->id > remtId) \
         || (remtIsLast == "true" && this->id < remtNextId)){
-          request << "getKeys" << this->id << "" << "" << "" << "";
+          request << "getkeys" << this->id << " " << " " << " " << " ";
           cli.send(request);
           cli.receive(answer);
           str keys;
@@ -169,7 +169,7 @@ class tracker{
           else
             this->amILast = "false";
           request << "setinfo" << this->id << this->ip << this->port \
-                  << remtIsLast << "";
+                  << remtIsLast << " ";
           cli.send(request);
           cli.receive(answer);
           setBefInfo(remtId,this->remoteIp,this->remotePort);
@@ -181,7 +181,7 @@ class tracker{
           cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
           cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
           request << "unbindbef" << this->id << this->ip << this->port \
-                  << "" << "";
+                  << " " << " ";
           cli.send(request);
           cli.receive(answer);
           cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
@@ -219,6 +219,8 @@ class tracker{
     void server(socket& serv){
       /* it will simulate a sever into tracker */
       serv.bind("tcp://"+this->ip+":"+this->port);
+      if(this->ip == "*")
+        this->ip = "localhost";
       message request, reply;
       str op, cId, cIp, cPort, last, keys;
 
@@ -243,7 +245,6 @@ class tracker{
 
         serv.send(reply);
       }
-      serv.unbind("tcp://"+this->ip+":"+this->port);
     }
 
   private:
@@ -315,6 +316,7 @@ class tracker{
 
     void disconnect(message& package){
       /* it will disconnect this server */
+      this->mustIUnbindBef = true;
       this->_exit = true;
       package << "ok";
     }
@@ -324,10 +326,10 @@ int main(int argc,const char **argv){
   str ownFiles = "", id = "";
   map<str,str> machInfo = getMachInfo();
   ownFiles = getFiles(machInfo["ip"],"/files");
-  id = sha1(machInfo["mac"]);
+  id = sha1(machInfo["mac"]+"2");
   context s_ctx, c_ctx;
   socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
-  tracker track(id,localIp,"5555",remoteIp,"7777",ownFiles);
+  tracker track(id,localIp,"5556",remoteIp,"5555",ownFiles);
   thread t0(&tracker::_unbindBef, &track, ref(cli));
   thread t1(&tracker::server, &track, ref(serv));
   track.client(cli);
