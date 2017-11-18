@@ -25,21 +25,22 @@ class tracker{
 
   private:
     _map keys;
-    str id, ip, port, remoteId, remoteIp, remotePort, amILast, befIp, befPort;
+    str id, ip, port, remoteId, remoteIp, remotePort, \
+                      befId, befIp, befPort, amILast;
     mutex ubd; // unbind mutex
     condition_variable cv;
     bool _exit;
 
   public:
     void _unbindBef(socket& cli){
-      /* it will unbind this client bef node and will bind with other
+      /* it will unbind this client with bef node, and will bind with other
         bef node server */
       while(true){
         unique_lock<mutex> lock(this->ubd);
         this->cv.wait(lock,[&]{return this->mustIUnbindBef;});
         if(this->_exit) break;
         cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
-        setBefInfo(this->befIpAux,this->befPortAux);
+        setBefInfo(this->befIdAux,this->befIpAux,this->befPortAux);
         cli.connect("tcp://"+this->befIp+":"+this->befPort);
         this->mustIUnbindBef = false;
       }
@@ -86,7 +87,7 @@ class tracker{
       this->id = id;
       this->ip = ip;
       this->port = port;
-      setBefInfo("none","none");
+      setBefInfo("none","none","none");
       setRemoteInfo("none",remoteIp,remotePort);
       this->amILast = "true";
       this->_exit = false;
@@ -111,13 +112,16 @@ class tracker{
       message request, answer;
       str keys = "";
       getKeys(keys);
+      if(this->id < this->befId) // first node with last node case
+        this->amILast = "true";
       request << "setinfo" << this->remoteId << this->remoteIp \
               <<this->remotePort << this->amILast << keys;
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
       cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
-      request << "unbindbef" << "" << this->befIp << this->befPort << "" << "";
+      request << "unbindbef" << this->befId << this->befIp << this->befPort \
+              << "" << "";
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
@@ -142,7 +146,8 @@ class tracker{
         answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
                >> remtIsLast;
         if(this->id == remtNextId){
-          setBefInfo(this->remoteIp,this->remotePort);
+          this->remoteId = remtId;
+          setBefInfo(remtId,this->remoteIp,this->remotePort);
           break;
         }
         if( (remtNextId == "none") \
@@ -165,11 +170,16 @@ class tracker{
                   << remtIsLast << "";
           cli.send(request);
           cli.receive(answer);
-          setBefInfo(this->remoteIp,this->remotePort);
+          setBefInfo(remtId,this->remoteIp,this->remotePort);
+          if(this->ip == remtNextIp && this->port == remtNextPort){
+            this->remoteId = remtId;
+            break;
+          }
           setRemoteInfo(remtNextId,remtNextIp,remtNextPort);
           cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
           cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
-          request << "unbindbef" << "" << this->ip << this->port << "" << "";
+          request << "unbindbef" << this->id << this->ip << this->port \
+                  << "" << "";
           cli.send(request);
           cli.receive(answer);
           cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
@@ -191,15 +201,16 @@ class tracker{
       }
     }
 
-    void setBefInfo(str ip,str port){
+    void setBefInfo(str id,str ip,str port){
       /* it will set up bef node info */
+      this->befId = id;
       this->befIp = ip;
       this->befPort = port;
     }
 
   /* ---------------- server side ---------------- */
   private:
-    str befIpAux, befPortAux;
+    str befIdAux, befIpAux, befPortAux;
     bool mustIUnbindBef;
 
   public:
@@ -223,7 +234,7 @@ class tracker{
           setInfo(reply,cId,cIp,cPort,last,keys);
 
         else if(op == "unbindbef")
-          unbindBef(reply,cIp,cPort);
+          unbindBef(reply,cId,cIp,cPort);
 
         else if(op == "disconnect")
           disconnect(reply);
@@ -238,13 +249,12 @@ class tracker{
       /* it will set up all remote node info */
       setRemoteInfo(id,ip,port);
       setKeys(keys);
-      if(id > this->id)
-        this->amILast = last;
+      this->amILast = last;
       package << "ok";
     }
 
     void getInfo(message& package){
-      /* it will get this node and next node info for requester client */
+      /* it will get this node and next node info for requester node */
        package << this->id << this->remoteId << this->remoteIp \
                << this->remotePort << this->amILast;
     }
@@ -287,9 +297,10 @@ class tracker{
       package << ckeys;
     }
 
-    void unbindBef(message& package,str ip, str port){
+    void unbindBef(message& package,str id,str ip, str port){
       /* it will request this client to disconnect with bef node */
-      if(this->ip != ip && this->port != port){ // if am not alone in ring
+      if(this->ip != ip && this->port != port){ // if am not alone into ring
+        this->befIdAux = id;
         this->befIpAux = ip;
         this->befPortAux = port;
         package << "ok";
