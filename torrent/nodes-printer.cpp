@@ -1,12 +1,6 @@
 #include <zmqpp/zmqpp.hpp>
 #include <string>
 #include <iostream>
-#ifndef _WIN32
-#include <unistd.h>
-#else
-#include <windows.h>
-#define sleep(n)    Sleep(n)
-#endif
 
 using namespace zmqpp;
 using namespace std;
@@ -16,22 +10,14 @@ int main () {
     //  Prepare our context and socket
     context ctx;
     socket sock(ctx, socket_type::rep);
-    sock.bind ("tcp://*:5555");
+    sock.bind ("tcp://*:7777");
 
     while (true) {
-        message request;
-
-        //  Wait for next request from client
+        message request, reply;
         sock.receive(request);
-        str node_id;
-        request >> node_id;
-        std::cout << node_id << std::endl;
-
-        //  Do some 'work'
-        sleep(1);
-
-        //  Send reply back to client
-        message reply;
+        str id, keysdomain;
+        request >> id >> keysdomain;
+        cout <<"Node id = "<<id<< "\nKeys domain = "<<keysdomain<<endl<<endl;
         reply << "ok";
         sock.send(reply);
     }
