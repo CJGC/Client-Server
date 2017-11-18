@@ -7,8 +7,8 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include "getMachInfo.hh"
-#include "loadFiles.hh"
+#include "lib/getMachInfo.hh"
+#include "lib/loadFiles.hh"
 
 using namespace zmqpp;
 using namespace std;
