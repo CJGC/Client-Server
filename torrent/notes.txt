@@ -27,3 +27,6 @@
 -> DFS (Deep First Search)
 -> lambda function -> (map (1 2 3 4 5) lamda1)
     squared numbers -> (1 4 9 16 25 )
+
+-> threads tutorial
+   http://thispointer.com/c11-multithreading-part-3-carefully-pass-arguments-to-threads/
