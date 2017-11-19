@@ -1,4 +1,4 @@
-1) Start printer node.
+1) Start nodes printer.
 2) Start all nodes.
 3) Press enter to node 1 and node 2  or node 2 then node 1
    before another node. (if not, first phase chord won't be happen, and errors will occour).
