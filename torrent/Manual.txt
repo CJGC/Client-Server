@@ -2,9 +2,19 @@
 1) Start nodes printer.
 2) Start all nodes.
 3) Press enter to node 1 and node 2  or node 2 then node 1
-   before another node. (if not, first phase chord won't be happen, and errors will occour).
+   before another node. (if not, first phase chord won't be happen,
+   and errors will occur).
 4) You can press enter to others nodes in the desired order.
 5) When all nodes are successfully connected you can disconnect pressing enter.
    (You can disconnect in the desired order).
 6) You can add new nodes if you want.
-   (keep in mind, remote node port must to belong to an existing node into chord ring).
+   (keep in mind, remote node port must to belong to an existing node into
+   chord ring).
+
+
+nodes-printer will print node's info in the following form:
+
+Node ID = id
+Keys domain = key : [owner name, filename] key : [owner name, filename] etc
+
+<<< important notice that each key will be separated by a space >>>
