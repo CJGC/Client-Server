@@ -1,0 +1,10 @@
+1) Start printer node.
+2) Start all nodes.
+3) Press enter to node 1 and node 2  or node 2 then node 1
+   before another node. (if not, first phase chord won't be happen, and errors will occour).
+4) You can press enter to others nodes in the desired order.
+5) When all nodes are successfully conected you can disconnect pressing enter.
+   (You can disconnect in the desired order).
+6) You can add new nodes if you want. 
+   (keep in mind, remote node port must to belong to an existing node into chord ring).
+
