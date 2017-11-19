@@ -1,3 +1,4 @@
+0) Use make to compile all nodes.
 1) Start nodes printer.
 2) Start all nodes.
 3) Press enter to node 1 and node 2  or node 2 then node 1
