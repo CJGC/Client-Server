@@ -8,13 +8,13 @@
 5) When all nodes are successfully connected you can disconnect pressing enter.
    (You can disconnect in the desired order).
 6) You can add new nodes if you want.
-   (keep in mind, remote node port must to belong to an existing node into
+   (keep in mind, remote node's port must to belong to an existing node into
    chord ring).
 
 
-nodes-printer will print node's info in the following form:
+Nodes-printer will print node's info in the following form:
 
 Node ID = id
-Keys domain = key : [owner name, filename] key : [owner name, filename] etc
+Keys domain = key owner-name filename key owner-name filename etc
 
-<<< important notice that each key will be separated by a space >>>
+<<< important notice that each item will be separated by a space >>>
