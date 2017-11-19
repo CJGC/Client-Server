@@ -16,7 +16,7 @@ typedef string str;
 using vec = vector<str>;
 using _map = map<str,vec>;
 
-str localIp = "*", remoteIp = "localhost";
+str localIp = "*", remoteIp = "localhost", printerIp = "localhost";
 
 class tracker{
 
@@ -339,7 +339,7 @@ int main(int argc,const char **argv){
          ,printer(p_ctx,socket_type::req);
   /* printing current keys domain */
   message request, answer;
-  printer.connect("tcp://localhost:7777");
+  printer.connect("tcp://"+printerIp+":7777");
   request << id << ownFiles;
   printer.send(request);
   printer.receive(answer);
@@ -350,6 +350,6 @@ int main(int argc,const char **argv){
   track.client(cli,printer);
   t0.join();
   t1.join();
-  printer.disconnect("tcp://localhost:7777");
+  printer.disconnect("tcp://"+printerIp+":7777");
   return 0;
 }
