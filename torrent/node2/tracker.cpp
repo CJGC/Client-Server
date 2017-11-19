@@ -95,12 +95,19 @@ class tracker{
       setKeys(ownFiles);
     }
 
-    void client(socket& cli){
+    void client(socket& cli,socket& printer){
       /* it will simulate a client into tracker */
       str userOp;
       cout <<"type something to connect";
       getline(cin,userOp);
       bindWithChord(cli);
+      /* printing after binding node */
+      message request, answer;
+      str keys;
+      getKeys(keys);
+      request << this->id << keys ;
+      printer.send(request);
+      printer.receive(answer);
       cout << "type something to exit: ";
       getline(cin,userOp);
       if(this->_exit)
@@ -302,7 +309,7 @@ class tracker{
 
     void unbindBef(message& package,str id,str ip, str port){
       /* it will request this client to disconnect with bef node */
-      if(this->ip != ip && this->port != port){ // if am not alone into ring
+      if(this->id != id){ // if am not alone into ring
         this->befIdAux = id;
         this->befIpAux = ip;
         this->befPortAux = port;
@@ -327,13 +334,22 @@ int main(int argc,const char **argv){
   map<str,str> machInfo = getMachInfo();
   ownFiles = getFiles(machInfo["ip"],"/files");
   id = sha1(machInfo["mac"]+"2");
-  context s_ctx, c_ctx;
-  socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req);
+  context s_ctx, c_ctx, p_ctx;
+  socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req)\
+         ,printer(p_ctx,socket_type::req);
+  /* printing current keys domain */
+  message request, answer;
+  printer.connect("tcp://localhost:7777");
+  request << id << ownFiles;
+  printer.send(request);
+  printer.receive(answer);
+  /* incoming node into chord ring */
   tracker track(id,localIp,"5556",remoteIp,"5555",ownFiles);
   thread t0(&tracker::_unbindBef, &track, ref(cli));
   thread t1(&tracker::server, &track, ref(serv));
-  track.client(cli);
+  track.client(cli,printer);
   t0.join();
   t1.join();
+  printer.disconnect("tcp://localhost:7777");
   return 0;
 }
