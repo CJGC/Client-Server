@@ -31,6 +31,7 @@ str getFiles(str ownerName,str inputDir="/files") {
   DIR *dir = openDir(inputDir);
   struct dirent *file;
   while( (file = readdir(dir)) != NULL ){
+    if(file->d_type == DT_DIR) continue;
     str filename = file->d_name;
     str key = sha1(ownerName+":"+filename);
     ownFiles += key + " " + ownerName + " " + filename + " ";
