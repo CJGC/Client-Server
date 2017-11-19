@@ -196,7 +196,7 @@ class tracker{
           break;
         }
 
-        cli.disconnect("tpc//"+this->remoteIp+":"+this->remotePort);
+        cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
         this->remoteIp = remtNextIp; this->remotePort = remtNextPort;
       }
     }

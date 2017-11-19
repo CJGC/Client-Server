@@ -144,6 +144,7 @@ class tracker{
 
     void bindWithChord(socket& cli){
       /* it will bind with chord ring */
+      str stop;
       while(true){
         message request, answer;
         cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
@@ -195,8 +196,7 @@ class tracker{
           cli.connect("tcp://"+this->befIp+":"+this->befPort);
           break;
         }
-
-        cli.disconnect("tpc//"+this->remoteIp+":"+this->remotePort);
+        cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
         this->remoteIp = remtNextIp; this->remotePort = remtNextPort;
       }
     }
@@ -333,7 +333,7 @@ int main(int argc,const char **argv){
   str ownFiles = "", id = "";
   map<str,str> machInfo = getMachInfo();
   ownFiles = getFiles(machInfo["ip"],"/files");
-  id = sha1(machInfo["mac"]+"1");
+  id = sha1(machInfo["mac"]+"3");
   context s_ctx, c_ctx, p_ctx;
   socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req)\
          ,printer(p_ctx,socket_type::req);
