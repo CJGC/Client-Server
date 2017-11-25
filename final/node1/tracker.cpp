@@ -7,6 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <cmath>
 #include "../lib/getMachInfo.hh"
 #include "../lib/loadFiles.hh"
 
@@ -24,7 +25,7 @@ class tracker{
           client and server side respectively --- */
 
   private:
-    _map keys;
+    _map keys, finTabl;
     str id, ip, port, remoteId, remoteIp, remotePort, \
                       befId, befIp, befPort, amILast;
     mutex ubd; // unbind mutex
@@ -93,14 +94,17 @@ class tracker{
       this->_exit = false;
       this->mustIUnbindBef = false;
       setKeys(ownFiles);
+      buildFinTabl();
     }
 
-    void client(socket& cli,socket& printer){
+    void client(socket& cli,socket& printer,socket& aux){
       /* it will simulate a client into tracker */
       str userOp;
       cout <<"type something to connect";
       getline(cin,userOp);
       bindWithChord(cli);
+      if(this->amILast != "true")
+        setFinTabl(aux);
       /* printing after binding node */
       message request, answer;
       str keys;
@@ -116,6 +120,58 @@ class tracker{
     }
 
   private:
+    void buildFinTabl(){
+      /* it will build finger table */
+      uint finTablDepth = log2( (double)(sizeof(uint) * 8 ) );
+      for(uint i = 0; i<finTablDepth; i++){
+        str key = this->id + to_string( pow(2,i) );
+        key = sha1(key);
+        vec second;
+        second.resize(2);
+        second[0] = "";
+        second[1] = "";
+        this->finTabl[key] = second;
+      }
+    }
+
+    void searchIntoRing(socket& aux,_map::iterator& item){
+      /* it will search into chord ring for binding with */
+      str key = item->first, ip = this->remoteIp, port = this->remotePort;
+
+      while(true){
+        message request, answer;
+        aux.connect("tcp://"+ip+":"+port);
+        request << "getinfo" << " " << " " << " " << " " << " ";
+        aux.send(request);
+        aux.receive(answer);
+        str remtId = "", remtNextId = "", remtNextIp = "", remtNextPort = "",\
+            remtIsLast = "";
+        answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
+               >> remtIsLast;
+
+        if(key <= remtId || remtIsLast == "true"){
+          item->second[0] = ip;
+          item->second[1] = port;
+          break;
+        }
+
+        aux.disconnect("tcp://"+ip+":"+port);
+        ip = remtNextIp;
+        port = remtNextPort;
+      }
+
+      aux.disconnect("tcp://"+ip+":"+port);
+    }
+
+    void setFinTabl(socket& aux){
+      /* it will set up finger table */
+      _map::iterator start = this->finTabl.begin();
+      _map::iterator end = this->finTabl.end();
+      for(auto& it = start; it != end; it++){
+        searchIntoRing(aux,it);
+      }
+    }
+
     void unbindWithChord(socket& cli){
       /* it will unbind with chord ring */
       message request, answer;
@@ -334,9 +390,9 @@ int main(int argc,const char **argv){
   map<str,str> machInfo = getMachInfo();
   ownFiles = getFiles(machInfo["ip"],"/files");
   id = sha1(machInfo["mac"]+"1");
-  context s_ctx, c_ctx, p_ctx;
+  context s_ctx, c_ctx, p_ctx, a_ctx;
   socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req)\
-         ,printer(p_ctx,socket_type::req);
+         ,printer(p_ctx,socket_type::req), aux(a_ctx,socket_type::req);
   /* printing current keys domain */
   message request, answer;
   printer.connect("tcp://"+printerIp+":7777");
@@ -347,7 +403,7 @@ int main(int argc,const char **argv){
   tracker track(id,localIp,"5555",remoteIp,"5556",ownFiles);
   thread t0(&tracker::_unbindBef, &track, ref(cli));
   thread t1(&tracker::server, &track, ref(serv));
-  track.client(cli,printer);
+  track.client(cli,printer,aux);
   t0.join();
   t1.join();
   printer.disconnect("tcp://"+printerIp+":7777");
