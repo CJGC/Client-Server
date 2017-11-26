@@ -84,10 +84,13 @@ class tracker{
   /* ---------------- client side ---------------- */
 
   public:
-    tracker(str id,str ip,str port,str remoteIp,str remotePort,str ownFiles){
+    tracker(str id,str ip,str port,str publIp,str publPort,str remoteIp,\
+            str remotePort,str ownFiles){
       this->id = id;
       this->ip = ip;
       this->port = port;
+      this->publIp = publIp;
+      this->publPort = publPort;
       setBefInfo("none","none","none");
       setRemoteInfo("none",remoteIp,remotePort);
       this->amILast = "true";
@@ -238,7 +241,7 @@ class tracker{
       message request, reply;
       str op, cId, cIp, cPort, last, keys;
 
-      while(!_exit){
+      while(!this->_exit){
         serv.receive(request);
         request >> op >> cId >> cIp >> cPort >> last >> keys;
 
@@ -337,11 +340,14 @@ class tracker{
 
     /* --------------------- publisher side ----------------- */
   private:
+    str publIp, publPort;
     void publisher(socket& publ){
       /* it will publish to subscriber when this client disconnect */
-      message request;
-      request << "disconnect";
-      publ.send(request);
+      message messag;
+      messag << "external disconnect" << this->id;
+      publ.send(messag);
+      messag << "disconnect" << " ";
+      publ.send(messag);
     }
 
     /* --------------------- subscriber side ----------------- */
@@ -359,10 +365,25 @@ class tracker{
       if(this->amILast != "true")
         setFinTabl(aux);
       conWithAllPubl(subs);
+      conWithMyPubl(subs);
+      listenPubl(subs);
       disconWithAllPubl(subs);
+      disconWithMyPubl(subs);
     }
 
   private:
+    void listenPubl(socket& subs){
+      /* it will listen all publihers messages */
+      while(!this->_exit){
+        message messag;
+        str part1, part2;
+        subs.receive(messag);
+        messag >> part1 >> part2;
+        if(part1 == "external disconnect"){}
+        else if(part2 == "disconnect"){}
+      }
+    }
+
     void buildFinTabl(){
       /* it will build finger table */
       uint finTablDepth = log2( (double)(sizeof(uint) * 8 ) );
@@ -414,6 +435,16 @@ class tracker{
         searchIntoRing(aux,it);
     }
 
+    void conWithMyPubl(socket& subs){
+      /* it will connect with this pusblisher */
+      subs.connect("tcp://"+this->publIp+":"+this->publPort);
+    }
+
+    void disconWithMyPubl(socket& subs){
+      /* it will disconnect with this pusblisher */
+      subs.disconnect("tcp://"+this->publIp+":"+this->publPort);
+    }
+
     void conWithAllPubl(socket& subs){
       /* it will connect with all sockets into finger table */
       for(auto& item : this->finTabl){
@@ -449,7 +480,7 @@ int main(int argc,const char **argv){
   // printer.send(request);
   // printer.receive(answer);
   /* incoming node into chord ring */
-  tracker track(id,localIp,"5555",remoteIp,"5557",ownFiles);
+  tracker track(id,localIp,"5555",localIp,"5556",remoteIp,"5557",ownFiles);
   thread t0(&tracker::_unbindBef, &track, ref(cli)),\
          t1(&tracker::server, &track, ref(serv)),\
          t2(&tracker::subscriber, &track, ref(subs), ref(aux));
