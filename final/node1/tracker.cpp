@@ -27,23 +27,26 @@ class tracker{
   private:
     _map keys;
     str id, ip, port, remoteId, remoteIp, remotePort, \
-                      befId, befIp, befPort, amILast;
+        befId, befIp, befPort, auxId, auxIp, auxPort, amILast;
     mutex ubd; // unbind mutex
     condition_variable cv;
-    bool _exit;
+    bool _exit, mustINotify;
 
   public:
-    void _unbindBef(socket& cli){
-      /* it will unbind this client with bef node, and will bind with other
-        bef node server */
+    void UpgrFinTablnotify(socket& cli){
+      /* it will notify bef node, to upgrade finger table info */
       while(true){
         unique_lock<mutex> lock(this->ubd);
-        this->cv.wait(lock,[&]{return this->mustIUnbindBef;});
+        this->cv.wait(lock,[&]{return this->mustINotify;});
         if(this->_exit) break;
-        cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
-        setBefInfo(this->befIdAux,this->befIpAux,this->befPortAux);
-        cli.connect("tcp://"+this->befIp+":"+this->befPort);
-        this->mustIUnbindBef = false;
+        if(this->amILast != "true"){
+          message request, answer;
+          request << "upgrfintabl" << this->auxId << this->auxIp \
+                  << this->auxPort << " " << " ";
+          cli.send(request);
+          cli.receive(answer);
+        }
+        this->mustINotify = false;
       }
     }
 
@@ -81,8 +84,14 @@ class tracker{
       this->remotePort = port;
     }
 
-  /* ---------------- client side ---------------- */
+    void setBefInfo(str id,str ip,str port){
+      /* it will setup bef node info */
+      this->befId = id;
+      this->befIp = ip;
+      this->befPort = port;
+    }
 
+  /* ---------------- client side ---------------- */
   public:
     tracker(str id,str ip,str port,str publIp,str publPort,str remoteIp,\
             str remotePort,str ownFiles){
@@ -95,7 +104,7 @@ class tracker{
       setRemoteInfo("none",remoteIp,remotePort);
       this->amILast = "true";
       this->_exit = false;
-      this->mustIUnbindBef = false;
+      this->mustINotify = false;
       this->canIStart = false;
       setKeys(ownFiles);
       buildFinTabl();
@@ -109,6 +118,11 @@ class tracker{
       bindWithChord(cli);
       this->canIStart = true;
       this->sbcv.notify_one();
+      this->auxId = this->id;
+      this->auxIp = this->ip;
+      this->auxPort = this->port;
+      this->mustINotify = true;
+      this->cv.notify_one();
       /* printing after binding node */
       //message request, answer;
       //str keys;
@@ -149,7 +163,6 @@ class tracker{
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->ip+":"+this->port);
-      this->cv.notify_one();
     }
 
     void bindWithChord(socket& cli){
@@ -220,20 +233,12 @@ class tracker{
       }
     }
 
-    void setBefInfo(str id,str ip,str port){
-      /* it will setup bef node info */
-      this->befId = id;
-      this->befIp = ip;
-      this->befPort = port;
-    }
-
   /* ---------------- server side ---------------- */
   private:
     str befIdAux, befIpAux, befPortAux;
-    bool mustIUnbindBef;
 
   public:
-    void server(socket& serv){
+    void server(socket& serv,socket& cli,socket& subs){
       /* it will simulate a sever into tracker */
       serv.bind("tcp://"+this->ip+":"+this->port);
       if(this->ip == "*")
@@ -254,8 +259,13 @@ class tracker{
         else if(op == "setinfo")
           setInfo(reply,cId,cIp,cPort,last,keys);
 
+        else if(op == "upgrfintabl"){
+          upgrFinTabl(subs,cId,cIp,cPort);
+          reply << "ok";
+        }
+
         else if(op == "unbindbef")
-          unbindBef(reply,cId,cIp,cPort);
+          unbindBef(reply,cli,cId,cIp,cPort);
 
         else if(op == "disconnect")
           disconnect(reply);
@@ -317,24 +327,23 @@ class tracker{
       package << ckeys;
     }
 
-    void unbindBef(message& package,str id,str ip, str port){
+    void unbindBef(message& package,socket& cli,str id,str ip, str port){
       /* it will request this client to disconnect with bef node */
       if(this->id != id){ // if am not alone into ring
-        this->befIdAux = id;
-        this->befIpAux = ip;
-        this->befPortAux = port;
+        cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
+        setBefInfo(id,ip,port);
+        cli.connect("tcp://"+this->befIp+":"+this->befPort);
         package << "ok";
       }
       else
         disconnect(package); // if am alone, i will disconnect
-      this->mustIUnbindBef = true;
-      this->cv.notify_one();
     }
 
     void disconnect(message& package){
       /* it will disconnect this server */
-      this->mustIUnbindBef = true;
+      this->mustINotify = true;
       this->_exit = true;
+      this->cv.notify_one();
       package << "ok";
     }
 
@@ -401,6 +410,28 @@ class tracker{
       item->second[0] = newIp;
       item->second[1] = newPort;
       subs.connect("tcp://"+newIp+":"+newPort);
+    }
+
+    void upgrFinTabl(socket& subs,str& id,str& ip,str& port){
+      /* it will upgrade this finger table requested by new node into ring chord
+       */
+       for(auto& item : this->finTabl){
+         str key = item.first;
+         if(key <= id){
+           str oldIp = item.second[0], oldPort = item.second[1];
+           subs.disconnect("tcp://"+oldIp+":"+oldPort);
+           item.second[0] = ip;
+           item.second[1] = port;
+           subs.connect("tcp://"+ip+":"+port);
+           break;
+         }
+       }
+
+       this->auxId = id;
+       this->auxIp = ip;
+       this->auxPort = port;
+       this->mustINotify = true;
+       this->cv.notify_one();
     }
 
     void buildFinTabl(){
@@ -500,8 +531,8 @@ int main(int argc,const char **argv){
   // printer.receive(answer);
   /* incoming node into chord ring */
   tracker track(id,localIp,"5555",localIp,"5556",remoteIp,"5557",ownFiles);
-  thread t0(&tracker::_unbindBef, &track, ref(cli)),\
-         t1(&tracker::server, &track, ref(serv)),\
+  thread t0(&tracker::UpgrFinTablnotify, &track, ref(cli)),\
+         t1(&tracker::server, &track, ref(serv),ref(cli), ref(subs)),\
          t2(&tracker::subscriber, &track, ref(subs), ref(aux));
   track.client(cli,printer,publ);
   t0.join();
