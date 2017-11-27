@@ -30,7 +30,7 @@ class tracker{
         befId, befIp, befPort, auxId, auxIp, auxPort, amILast;
     mutex ubd; // unbind mutex
     condition_variable cv;
-    bool _exit, mustINotify;
+    bool _exit, mustINotify, amIClient;
 
   public:
     void UpgrFinTablnotify(socket& cli){
@@ -39,7 +39,7 @@ class tracker{
         unique_lock<mutex> lock(this->ubd);
         this->cv.wait(lock,[&]{return this->mustINotify;});
         if(this->_exit) break;
-        if(this->amILast != "true"){
+        if(this->id < this->auxId || this->amIClient){
           message request, answer;
           request << "upgrfintabl" << this->auxId << this->auxIp \
                   << this->auxPort << " " << " ";
@@ -106,6 +106,7 @@ class tracker{
       this->_exit = false;
       this->mustINotify = false;
       this->canIStart = false;
+      this->amIClient = false;
       setKeys(ownFiles);
       buildFinTabl();
     }
@@ -122,6 +123,7 @@ class tracker{
       this->auxIp = this->ip;
       this->auxPort = this->port;
       this->mustINotify = true;
+      this->amIClient = true;
       this->cv.notify_one();
       /* printing after binding node */
       //message request, answer;
@@ -431,6 +433,7 @@ class tracker{
        this->auxIp = ip;
        this->auxPort = port;
        this->mustINotify = true;
+       this->amIClient = false;
        this->cv.notify_one();
     }
 
@@ -499,6 +502,7 @@ class tracker{
       /* it will connect with all sockets into finger table */
       for(auto& item : this->finTabl){
         str ip = item.second[0], port = item.second[1];
+        if(ip == "" && port == "") continue;
         subs.connect("tcp://"+ip+":"+port);
       }
     }
@@ -507,6 +511,7 @@ class tracker{
       /* it will disconnect with all sockets into finger table*/
       for(auto& item : this->finTabl){
         str ip = item.second[0], port = item.second[1];
+        if(ip == "" && port == "") continue;
         subs.disconnect("tcp://"+ip+":"+port);
       }
     }
