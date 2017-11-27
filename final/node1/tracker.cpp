@@ -49,7 +49,7 @@ class tracker{
 
   private:
     void setKeys(const str& keys){
-      /* it will set up keys domain */
+      /* it will setup keys domain */
       str key = "", ownerName = "", fileName = "", aux = "";
 
       for(char ch : keys)
@@ -75,7 +75,7 @@ class tracker{
     }
 
     void setRemoteInfo(str id,const str& ip,const str& port){
-      /* it will set up remote info */
+      /* it will setup remote info */
       this->remoteId = id;
       this->remoteIp = ip;
       this->remotePort = port;
@@ -110,12 +110,12 @@ class tracker{
       this->canIStart = true;
       this->sbcv.notify_one();
       /* printing after binding node */
-      message request, answer;
-      str keys;
-      getKeys(keys);
-      request << this->id << keys ;
-      printer.send(request);
-      printer.receive(answer);
+      //message request, answer;
+      //str keys;
+      //getKeys(keys);
+      //request << this->id << keys ;
+      //printer.send(request);
+      //printer.receive(answer);
       cout << "type something to exit: ";
       getline(cin,userOp);
       publisher(publ);
@@ -221,7 +221,7 @@ class tracker{
     }
 
     void setBefInfo(str id,str ip,str port){
-      /* it will set up bef node info */
+      /* it will setup bef node info */
       this->befId = id;
       this->befIp = ip;
       this->befPort = port;
@@ -266,7 +266,7 @@ class tracker{
 
   private:
     void setInfo(message& package,str id,str ip,str port,str last,str keys){
-      /* it will set up all remote node info */
+      /* it will setup all remote node info */
       setRemoteInfo(id,ip,port);
       setKeys(keys);
       this->amILast = last;
@@ -344,9 +344,14 @@ class tracker{
     void publisher(socket& publ){
       /* it will publish to subscriber when this client disconnect */
       message messag;
-      messag << "external disconnect" << this->id;
+      str ip = this->remoteIp, port = this->remotePort;
+      if(this->amILast == "true"){
+        ip = this->befIp;
+        port = this->befPort;
+      }
+      messag << "external disconnect" << this->id << ip << port;
       publ.send(messag);
-      messag << "disconnect" << " ";
+      messag << "disconnect" << this->id << " " << " ";
       publ.send(messag);
     }
 
@@ -374,14 +379,28 @@ class tracker{
   private:
     void listenPubl(socket& subs){
       /* it will listen all publihers messages */
-      while(!this->_exit){
+      while(true){
         message messag;
-        str part1, part2;
+        str part1, part2, part3, part4;
         subs.receive(messag);
-        messag >> part1 >> part2;
-        if(part1 == "external disconnect"){}
-        else if(part2 == "disconnect"){}
+        messag >> part1 >> part2 >> part3 >> part4;
+        if(part1 == "external disconnect" && part2 != this->id)
+          discAndUpgr(subs,part2,part3,part4);
+        else if(part1 == "disconnect" && part2 == this->id)
+          break;
       }
+    }
+
+    void discAndUpgr(socket& subs,str& newId,str& newIp,str& newPort){
+      /* it will disconnect with old publisher, setup finTabl with new publisher
+       ip and port and finally it will connect with new publisher */
+      _map::iterator item = this->finTabl.upper_bound(newId);
+      item--;
+      str oldIp = item->second[0], oldPort = item->second[1];
+      subs.disconnect("tcp://"+oldIp+":"+oldPort);
+      item->second[0] = newIp;
+      item->second[1] = newPort;
+      subs.connect("tcp://"+newIp+":"+newPort);
     }
 
     void buildFinTabl(){
@@ -428,7 +447,7 @@ class tracker{
     }
 
     void setFinTabl(socket& aux){
-      /* it will set up finger table */
+      /* it will setup finger table */
       _map::iterator start = this->finTabl.begin();
       _map::iterator end = this->finTabl.end();
       for(auto& it = start; it != end; it++)
