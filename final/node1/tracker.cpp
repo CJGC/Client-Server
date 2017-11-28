@@ -113,15 +113,20 @@ class tracker{
 
     void client(socket& cli,socket& printer, socket& publ){
       /* it will simulate a client into tracker */
+      publ.bind("tcp://"+this->publIp+":"+this->publPort); // binding publisher
+      if(this->publIp == "*")
+        this->publIp = "localhost";
       str userOp;
-      cout <<"type something to connect";
+      cout <<"type something to bind to ring chord: ";
       getline(cin,userOp);
       bindWithChord(cli);
       this->canIStart = true;
       this->sbcv.notify_one();
+      cout << "type something to continue: ";
+      getline(cin,userOp);
       this->auxId = this->id;
-      this->auxIp = this->ip;
-      this->auxPort = this->port;
+      this->auxIp = this->publIp;
+      this->auxPort = this->publPort;
       this->mustINotify = true;
       this->amIClient = true;
       this->cv.notify_one();
@@ -258,6 +263,9 @@ class tracker{
         else if(op == "getkeys")
           getKeys(reply,cId);
 
+        else if(op == "getpublinfo")
+          getPublInfo(reply);
+
         else if(op == "setinfo")
           setInfo(reply,cId,cIp,cPort,last,keys);
 
@@ -289,6 +297,12 @@ class tracker{
       /* it will get this node and next node info for requester node */
        package << this->id << this->remoteId << this->remoteIp \
                << this->remotePort << this->amILast;
+    }
+
+    void getPublInfo(message& package){
+      /* it will get this node and this publisher info for requester node */
+      package << this->id << this->remoteIp << this->remotePort << this->publIp\
+              << this->publPort << this->amILast;
     }
 
     void splitKeys(_map::iterator& f, _map::iterator& l, str& ckeys){
@@ -378,6 +392,7 @@ class tracker{
       /* main subscriber section */
       unique_lock<mutex> lock(this->sbm);
       this->sbcv.wait(lock,[&]{return this->canIStart;});
+      subs.subscribe(""); // default channel
       if(this->amILast != "true")
         setFinTabl(aux);
       conWithAllPubl(subs);
@@ -408,6 +423,7 @@ class tracker{
       _map::iterator item = this->finTabl.upper_bound(newId);
       item--;
       str oldIp = item->second[0], oldPort = item->second[1];
+      cout <<"old ip = "<< oldIp << " old port = " << oldPort << endl;
       subs.disconnect("tcp://"+oldIp+":"+oldPort);
       item->second[0] = newIp;
       item->second[1] = newPort;
@@ -417,17 +433,19 @@ class tracker{
     void upgrFinTabl(socket& subs,str& id,str& ip,str& port){
       /* it will upgrade this finger table requested by new node into ring chord
        */
-       for(auto& item : this->finTabl){
-         str key = item.first;
-         if(key <= id){
-           str oldIp = item.second[0], oldPort = item.second[1];
-           subs.disconnect("tcp://"+oldIp+":"+oldPort);
-           item.second[0] = ip;
-           item.second[1] = port;
-           subs.connect("tcp://"+ip+":"+port);
-           break;
+       if(id > this->id)
+         for(auto& item : this->finTabl){
+           str key = item.first;
+           if(key <= id){
+             str oldIp = item.second[0], oldPort = item.second[1];
+             if(oldIp != "" && oldPort != "")
+               subs.disconnect("tcp://"+oldIp+":"+oldPort);
+             item.second[0] = ip;
+             item.second[1] = port;
+             subs.connect("tcp://"+ip+":"+port);
+             break;
+           }
          }
-       }
 
        this->auxId = id;
        this->auxIp = ip;
@@ -458,17 +476,17 @@ class tracker{
       while(true){
         message request, answer;
         aux.connect("tcp://"+ip+":"+port);
-        request << "getinfo" << " " << " " << " " << " " << " ";
+        request << "getpublinfo" << " " << " " << " " << " " << " ";
         aux.send(request);
         aux.receive(answer);
-        str remtId = "", remtNextId = "", remtNextIp = "", remtNextPort = "",\
-            remtIsLast = "";
-        answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
-               >> remtIsLast;
+        str remtId = "", remtNextIp = "", remtNextPort = "", remtPublIp = "",\
+            remtPublPort = "", remtIsLast;
+        answer >> remtId >> remtNextIp >> remtNextPort >> remtPublIp \
+               >> remtPublPort >> remtIsLast;
 
         if(key <= remtId || remtIsLast == "true"){
-          item->second[0] = ip;
-          item->second[1] = port;
+          item->second[0] = remtPublIp;
+          item->second[1] = remtPublPort;
           break;
         }
 
@@ -524,10 +542,8 @@ int main(int argc,const char **argv){
   id = sha1(machInfo["mac"]+"1");
   context s_ctx, c_ctx, p_ctx, a_ctx, su_ctx, pu_ctx;
   socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req)\
-        ,printer(p_ctx,socket_type::req), aux(a_ctx,socket_type::req)\
-        ,subs(su_ctx,socket_type::subscribe), publ(pu_ctx,socket_type::publish);
-  subs.subscribe(""); // default channel
-  publ.bind("tcp://"+localIp+":5556"); // binding publisher
+      ,printer(p_ctx,socket_type::req), aux(a_ctx,socket_type::req)\
+      ,subs(su_ctx,socket_type::subscribe), publ(pu_ctx,socket_type::publish);
   /* printing current keys domain */
   // message request, answer;
   // printer.connect("tcp://"+printerIp+":7777");
