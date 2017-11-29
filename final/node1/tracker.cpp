@@ -186,7 +186,6 @@ class tracker{
                >> remtIsLast;
         if(this->id == remtNextId){
           this->remoteId = remtId;
-          setBefInfo(remtId,this->remoteIp,this->remotePort);
           break;
         }
         if( (remtNextId == "none") \
@@ -199,17 +198,7 @@ class tracker{
           str keys;
           answer >> keys;
           setKeys(keys);
-          if(remtIsLast == "true" && this->id > remtId){
-            this->amILast = "true";
-            remtIsLast = "false";
-          }
-          else
-            this->amILast = "false";
-          request << "setinfo" << this->id << this->ip << this->port \
-                  << remtIsLast << " ";
-          cli.send(request);
-          cli.receive(answer);
-          setBefInfo(remtId,this->remoteIp,this->remotePort);
+          requestSetInfo(cli,remtIsLast,remtId);
           if(this->ip == remtNextIp && this->port == remtNextPort){
             this->remoteId = remtId;
             break;
@@ -229,6 +218,31 @@ class tracker{
         cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
         this->remoteIp = remtNextIp; this->remotePort = remtNextPort;
       }
+    }
+
+    void setAmIlast(str& remtIsLast,str& remtId){
+      /* it will setup am I last variable */
+      if(remtIsLast == "true"){
+        if(this->id > remtId){
+          this->amILast = "true";
+          remtIsLast = "false";
+        }
+        else
+          this->amILast = "false";
+      }
+      else
+        this->amILast = "false";
+    }
+
+    void requestSetInfo(socket& cli,str& remtIsLast,str& remtId){
+      /* it will request to remote node upgrade info */
+      message request, answer;
+      setAmIlast(remtIsLast,remtId);
+      request << "setinfo" << this->id << this->ip << this->port \
+              << remtIsLast << " ";
+      cli.send(request);
+      cli.receive(answer);
+      setBefInfo(remtId,this->remoteIp,this->remotePort);
     }
 
     void getKeys(str& keys){
