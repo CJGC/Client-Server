@@ -393,8 +393,6 @@ class tracker{
       publ.send(messag);
       messag << "disconnect" << this->id << " " << " " << " ";
       publ.send(messag);
-      cout <<"external disconnect successfull";
-      getline(cin,ip);
     }
 
     /* --------------------- subscriber side ----------------- */
@@ -458,6 +456,7 @@ class tracker{
             oldPort = oldPortAux;
             item.second[0] = remtPublIp;
             item.second[1] = remtPublPort;
+            item.second[2] = remtId;
           }
         }
       }
@@ -469,19 +468,28 @@ class tracker{
     void upgrFinTabl(socket& subs,str& id,str& ip,str& port){
       /* it will upgrade this finger table requested by new node into ring chord
          (there is a problem here) */
-       if(id > this->id)
-         for(auto& item : this->finTabl){
-           str key = item.first;
-           if(key <= id){
-             str oldIp = item.second[0], oldPort = item.second[1];
-             if(oldIp != "" && oldPort != "")
-               subs.disconnect("tcp://"+oldIp+":"+oldPort);
-             item.second[0] = ip;
-             item.second[1] = port;
-             subs.connect("tcp://"+ip+":"+port);
-             break;
-           }
-         }
+      if(id > this->id){
+        str oldIp = "", oldPort = "", oldId = "";
+        for(auto& item : this->finTabl){
+          str key = item.first;
+          if(key <= id){
+            str oldIpAux = item.second[0], \
+                oldPortAux = item.second[1],\
+                oldIdAux = item.second[2];
+            if(id < oldIdAux){
+              oldIp = oldIpAux;
+              oldPort = oldPortAux;
+              item.second[0] = ip;
+              item.second[1] = port;
+              item.second[2] = id;
+              subs.connect("tcp://"+ip+":"+port);
+            }
+          }
+        }
+
+        if(oldIp != "" && oldPort != "")
+          subs.disconnect("tcp://"+oldIp+":"+oldPort);
+      }
 
        this->auxId = id;
        this->auxIp = ip;
@@ -498,9 +506,10 @@ class tracker{
         str key = this->id + to_string( pow(2,i) );
         key = sha1(key);
         vec second;
-        second.resize(2);
+        second.resize(3);
         second[0] = "";
         second[1] = "";
+        second[2] = "";
         this->finTabl[key] = second;
       }
     }
@@ -523,6 +532,7 @@ class tracker{
         if(key <= remtId || remtIsLast == "true"){
           item->second[0] = remtPublIp;
           item->second[1] = remtPublPort;
+          item->second[2] = remtId;
           break;
         }
 
