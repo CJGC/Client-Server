@@ -531,6 +531,8 @@ class tracker{
                >> remtPublPort >> remtIsLast;
 
         if(key <= remtId || remtIsLast == "true"){
+          if(remtIsLast == "true" && key > remtId)
+            break;
           item->second[0] = remtPublIp;
           item->second[1] = remtPublPort;
           item->second[2] = remtId;
