@@ -415,7 +415,6 @@ class tracker{
       conWithAllPubl(subs);
       conWithMyPubl(subs);
       listenPubl(subs,aux);
-      disconWithAllPubl(subs);
       disconWithMyPubl(subs);
     }
 
@@ -428,13 +427,13 @@ class tracker{
         subs.receive(messag);
         messag >> part1 >> part2 >> part3 >> part4 >> part5;
         if(part1 == "external disconnect" && part2 != this->id)
-          discAndUpgr(subs,aux,part2,part3,part4,part5);
+          upgrFinTabl(subs,aux,part2,part3,part4,part5);
         else if(part1 == "disconnect" && part2 == this->id)
           break;
       }
     }
 
-    void discAndUpgr(socket& subs,socket& aux,str& id,str& ip,str& port, \
+    void upgrFinTabl(socket& subs,socket& aux,str& id,str& ip,str& port, \
                      str& port2){
       /* it will disconnect with old publisher, setup finTabl with new publisher
        ip and port and finally it will connect with new publisher */
@@ -469,7 +468,7 @@ class tracker{
 
     void upgrFinTabl(socket& subs,str& id,str& ip,str& port){
       /* it will upgrade this finger table requested by new node into ring chord
-       */
+         (there is a problem here) */
        if(id > this->id)
          for(auto& item : this->finTabl){
            str key = item.first;
@@ -562,14 +561,6 @@ class tracker{
       }
     }
 
-    void disconWithAllPubl(socket& subs){
-      /* it will disconnect with all sockets into finger table*/
-      for(auto& item : this->finTabl){
-        str ip = item.second[0], port = item.second[1];
-        if(ip == "" && port == "") continue;
-        subs.disconnect("tcp://"+ip+":"+port);
-      }
-    }
 };
 
 int main(int argc,const char **argv){
