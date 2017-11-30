@@ -186,6 +186,7 @@ class tracker{
                >> remtIsLast;
         if(this->id == remtNextId){
           this->remoteId = remtId;
+          setBefInfo(remtId,this->remoteIp,this->remotePort);
           break;
         }
         if( (remtNextId == "none") \
@@ -379,7 +380,7 @@ class tracker{
 
     /* --------------------- publisher side ----------------- */
   private:
-    str publIp, publPort;
+    str publIp, publPort, publRemtIp, publRemPort;
     void publisher(socket& publ){
       /* it will publish to subscriber when this client disconnect */
       message messag;
@@ -388,10 +389,12 @@ class tracker{
         ip = this->befIp;
         port = this->befPort;
       }
-      messag << "external disconnect" << this->id << ip << port;
+      messag << "external disconnect" << this->id << ip << port << this->publPort;
       publ.send(messag);
-      messag << "disconnect" << this->id << " " << " ";
+      messag << "disconnect" << this->id << " " << " " << " ";
       publ.send(messag);
+      cout <<"external disconnect successfull";
+      getline(cin,ip);
     }
 
     /* --------------------- subscriber side ----------------- */
@@ -411,37 +414,57 @@ class tracker{
         setFinTabl(aux);
       conWithAllPubl(subs);
       conWithMyPubl(subs);
-      listenPubl(subs);
+      listenPubl(subs,aux);
       disconWithAllPubl(subs);
       disconWithMyPubl(subs);
     }
 
   private:
-    void listenPubl(socket& subs){
+    void listenPubl(socket& subs,socket& aux){
       /* it will listen all publihers messages */
       while(true){
         message messag;
-        str part1, part2, part3, part4;
+        str part1, part2, part3, part4, part5;
         subs.receive(messag);
-        messag >> part1 >> part2 >> part3 >> part4;
+        messag >> part1 >> part2 >> part3 >> part4 >> part5;
         if(part1 == "external disconnect" && part2 != this->id)
-          discAndUpgr(subs,part2,part3,part4);
+          discAndUpgr(subs,aux,part2,part3,part4,part5);
         else if(part1 == "disconnect" && part2 == this->id)
           break;
       }
     }
 
-    void discAndUpgr(socket& subs,str& newId,str& newIp,str& newPort){
+    void discAndUpgr(socket& subs,socket& aux,str& id,str& ip,str& port, \
+                     str& port2){
       /* it will disconnect with old publisher, setup finTabl with new publisher
        ip and port and finally it will connect with new publisher */
-      _map::iterator item = this->finTabl.upper_bound(newId);
-      item--;
-      str oldIp = item->second[0], oldPort = item->second[1];
-      cout <<"old ip = "<< oldIp << " old port = " << oldPort << endl;
+      message request, answer;
+      aux.connect("tcp://"+ip+":"+port);
+      request << "getpublinfo" << " " << " " << " " << " " << " ";
+      aux.send(request);
+      aux.receive(answer);
+      str remtId = "", remtNextIp = "", remtNextPort = "", remtPublIp = "",\
+          remtPublPort = "", remtIsLast, oldIp = "", oldPort = "";
+      answer >> remtId >> remtNextIp >> remtNextPort >> remtPublIp \
+             >> remtPublPort >> remtIsLast;
+      aux.disconnect("tcp://"+ip+":"+port);
+
+      for(auto& item: this->finTabl){
+        str key = item.first;
+        if(key <= id){
+          str oldIpAux = item.second[0];
+          str oldPortAux = item.second[1];
+          if(oldPortAux == port2){
+            oldIp = oldIpAux;
+            oldPort = oldPortAux;
+            item.second[0] = remtPublIp;
+            item.second[1] = remtPublPort;
+          }
+        }
+      }
+
       subs.disconnect("tcp://"+oldIp+":"+oldPort);
-      item->second[0] = newIp;
-      item->second[1] = newPort;
-      subs.connect("tcp://"+newIp+":"+newPort);
+      subs.connect("tcp://"+remtPublIp+":"+remtPublPort);
     }
 
     void upgrFinTabl(socket& subs,str& id,str& ip,str& port){
