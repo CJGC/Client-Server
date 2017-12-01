@@ -17,7 +17,7 @@ typedef string str;
 using vec = vector<str>;
 using _map = map<str,vec>;
 
-str localIp = "*", remoteIp = "localhost", printerIp = "localhost";
+str localIp = "*", aftIp = "localhost", printerIp = "localhost";
 
 class tracker{
 
@@ -26,23 +26,23 @@ class tracker{
 
   private:
     _map keys;
-    str id, ip, port, remoteId, remoteIp, remotePort, \
-        befId, befIp, befPort, auxId, auxIp, auxPort, amILast;
-    mutex ubd; // unbind mutex
-    condition_variable cv;
+    str id, ip, port, aftId, aftIp, aftPort, \
+        befId, befIp, befPort, auxId, publIpAux, publPortAux, amILast;
+    mutex ntfm; // notify mutex
+    condition_variable ntfcv; // notify condition variable
     bool _exit, mustINotify, amIClient;
 
   public:
     void UpgrFinTablnotify(socket& cli){
       /* it will notify bef node, to upgrade finger table info */
       while(true){
-        unique_lock<mutex> lock(this->ubd);
-        this->cv.wait(lock,[&]{return this->mustINotify;});
+        unique_lock<mutex> lock(this->ntfm);
+        this->ntfcv.wait(lock,[&]{return this->mustINotify;});
         if(this->_exit) break;
         if(this->id < this->auxId || this->amIClient){
           message request, answer;
-          request << "upgrfintabl" << this->auxId << this->auxIp \
-                  << this->auxPort << " " << " ";
+          request << "upgrfintabl" << this->auxId << this->publIpAux \
+                  << this->publPortAux << " " << " ";
           cli.send(request);
           cli.receive(answer);
         }
@@ -52,7 +52,7 @@ class tracker{
 
   private:
     void setKeys(const str& keys){
-      /* it will setup keys domain */
+      /* it will setup this keys domain */
       str key = "", ownerName = "", fileName = "", aux = "";
 
       for(char ch : keys)
@@ -77,11 +77,11 @@ class tracker{
           aux += ch;
     }
 
-    void setRemoteInfo(str id,const str& ip,const str& port){
-      /* it will setup remote info */
-      this->remoteId = id;
-      this->remoteIp = ip;
-      this->remotePort = port;
+    void setAftInfo(str id,const str& ip,const str& port){
+      /* it will setup after node info */
+      this->aftId = id;
+      this->aftIp = ip;
+      this->aftPort = port;
     }
 
     void setBefInfo(str id,str ip,str port){
@@ -91,17 +91,29 @@ class tracker{
       this->befPort = port;
     }
 
+    /* ------ Sebastian's printer section ------ */
+    // void printerFunct(socket& printer,vec& info){
+    //   /* it will request to external printer node, print info */
+    //   message request, answer;
+    //   for(auto item : info)
+    //     request << item;
+    //
+    //   printer.send(request);
+    //   printer.receive(answer);
+    // }
+    /* ------ End Sebastian's printer section ------ */
+
   /* ---------------- client side ---------------- */
   public:
-    tracker(str id,str ip,str port,str publIp,str publPort,str remoteIp,\
-            str remotePort,str ownFiles){
+    tracker(str id,str ip,str port,str publIp,str publPort,str aftIp,\
+            str aftPort,str ownFiles){
       this->id = id;
       this->ip = ip;
       this->port = port;
       this->publIp = publIp;
       this->publPort = publPort;
       setBefInfo("none","none","none");
-      setRemoteInfo("none",remoteIp,remotePort);
+      setAftInfo("none",aftIp,aftPort);
       this->amILast = "true";
       this->_exit = false;
       this->mustINotify = false;
@@ -117,54 +129,61 @@ class tracker{
       if(this->publIp == "*")
         this->publIp = "localhost";
       str userOp;
-      cout <<"type something to bind to ring chord: ";
+      cout <<"type something to bind with ring chord and upgrade this finger table: ";
       getline(cin,userOp);
       bindWithChord(cli);
       this->canIStart = true;
       this->sbcv.notify_one();
-      cout << "type something to continue: ";
+      cout << "type something to notify to before node upgrade finger table: ";
       getline(cin,userOp);
       this->auxId = this->id;
-      this->auxIp = this->publIp;
-      this->auxPort = this->publPort;
+      this->publIpAux = this->publIp;
+      this->publPortAux = this->publPort;
       this->mustINotify = true;
       this->amIClient = true;
-      this->cv.notify_one();
-      /* printing after binding node */
-      //message request, answer;
-      //str keys;
+      this->ntfcv.notify_one();
+      /* ------ Sebastian's printer section ------ */
+      //str keys = "", idsFinTabl = "";
       //getKeys(keys);
-      //request << this->id << keys ;
-      //printer.send(request);
-      //printer.receive(answer);
-      cout << "type something to exit: ";
+      //getIdsFinTabl(idsFinTabl);
+      // vec info; info.resize(6);
+      // info[0] = "add new node"; info[1] = this->id; info[2] = this->aftId;
+      // info[3] = this->befId; info[4] = keys; info[5] = idsFinTabl;
+      // printerFunct(printer,info);
+      /* ------ End Sebastian's printing zone ------ */
+      cout << "type something to send unsubscribe request to my subscribers and exit: ";
       getline(cin,userOp);
       publisher(publ);
-      if(this->_exit)
-        return;
-      unbindWithChord(cli);
+      if(!this->_exit)
+        unbindWithChord(cli);
+      /* ----- Sebastian's printer section ----- */
+      // vec info; info.resize(6);
+      // info[0] = "delete node"; info[1] = this->id; info[2] = this->aftId;
+      // info[3] = this->befId; info[4] = " "; info[5] = " ";
+      // printerFunct(printer,info);
+      /* ----- End Sebastian's printer section ----- */
     }
 
   private:
 
     void unbindWithChord(socket& cli){
-      /* it will unbind with chord ring */
+      /* it will let to current node unbind with chord ring */
       message request, answer;
       str keys = "";
       getKeys(keys);
       if(this->id < this->befId) // first node with last node case
         this->amILast = "true";
-      request << "setinfo" << this->remoteId << this->remoteIp \
-              <<this->remotePort << this->amILast << keys;
+      request << "setinfo" << this->aftId << this->aftIp \
+              <<this->aftPort << this->amILast << keys;
       cli.send(request);
       cli.receive(answer);
       cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
-      cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
+      cli.connect("tcp://"+this->aftIp+":"+this->aftPort);
       request << "unbindbef" << this->befId << this->befIp << this->befPort \
               << " " << " ";
       cli.send(request);
       cli.receive(answer);
-      cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
+      cli.disconnect("tcp://"+this->aftIp+":"+this->aftPort);
       cli.connect("tcp://"+this->ip+":"+this->port);
       request << "disconnect" << " " << " " << " " << " " << " ";
       cli.send(request);
@@ -173,10 +192,10 @@ class tracker{
     }
 
     void bindWithChord(socket& cli){
-      /* it will bind with chord ring */
+      /* it will let to current node bind with chord ring */
       while(true){
         message request, answer;
-        cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
+        cli.connect("tcp://"+this->aftIp+":"+this->aftPort);
         request << "getinfo" << " " << " " << " " << " " << " ";
         cli.send(request);
         cli.receive(answer);
@@ -185,8 +204,8 @@ class tracker{
         answer >> remtId >> remtNextId >> remtNextIp >> remtNextPort \
                >> remtIsLast;
         if(this->id == remtNextId){
-          this->remoteId = remtId;
-          setBefInfo(remtId,this->remoteIp,this->remotePort);
+          this->aftId = remtId;
+          setBefInfo(remtId,this->aftIp,this->aftPort);
           break;
         }
         if( (remtNextId == "none") \
@@ -199,25 +218,25 @@ class tracker{
           str keys;
           answer >> keys;
           setKeys(keys);
-          requestSetInfo(cli,remtIsLast,remtId);
+          reqSetInfo(cli,remtIsLast,remtId);
           if(this->ip == remtNextIp && this->port == remtNextPort){
-            this->remoteId = remtId;
+            this->aftId = remtId;
             break;
           }
-          setRemoteInfo(remtNextId,remtNextIp,remtNextPort);
+          setAftInfo(remtNextId,remtNextIp,remtNextPort);
           cli.disconnect("tcp://"+this->befIp+":"+this->befPort);
-          cli.connect("tcp://"+this->remoteIp+":"+this->remotePort);
+          cli.connect("tcp://"+this->aftIp+":"+this->aftPort);
           request << "unbindbef" << this->id << this->ip << this->port \
                   << " " << " ";
           cli.send(request);
           cli.receive(answer);
-          cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
+          cli.disconnect("tcp://"+this->aftIp+":"+this->aftPort);
           cli.connect("tcp://"+this->befIp+":"+this->befPort);
           break;
         }
 
-        cli.disconnect("tcp://"+this->remoteIp+":"+this->remotePort);
-        this->remoteIp = remtNextIp; this->remotePort = remtNextPort;
+        cli.disconnect("tcp://"+this->aftIp+":"+this->aftPort);
+        this->aftIp = remtNextIp; this->aftPort = remtNextPort;
       }
     }
 
@@ -235,15 +254,15 @@ class tracker{
         this->amILast = "false";
     }
 
-    void requestSetInfo(socket& cli,str& remtIsLast,str& remtId){
-      /* it will request to remote node upgrade info */
+    void reqSetInfo(socket& cli,str& remtIsLast,str& remtId){
+      /* it will request to before node upgrade info */
       message request, answer;
       setAmIlast(remtIsLast,remtId);
       request << "setinfo" << this->id << this->ip << this->port \
               << remtIsLast << " ";
       cli.send(request);
       cli.receive(answer);
-      setBefInfo(remtId,this->remoteIp,this->remotePort);
+      setBefInfo(remtId,this->aftIp,this->aftPort);
     }
 
     void getKeys(str& keys){
@@ -260,7 +279,7 @@ class tracker{
     str befIdAux, befIpAux, befPortAux;
 
   public:
-    void server(socket& serv,socket& cli,socket& subs){
+    void server(socket& serv,socket& cli,socket& subs,socket& printer){
       /* it will simulate a sever into tracker */
       serv.bind("tcp://"+this->ip+":"+this->port);
       if(this->ip == "*")
@@ -282,7 +301,7 @@ class tracker{
           getPublInfo(reply);
 
         else if(op == "setinfo")
-          setInfo(reply,cId,cIp,cPort,last,keys);
+          setInfo(printer,reply,cId,cIp,cPort,last,keys);
 
         else if(op == "upgrfintabl"){
           upgrFinTabl(subs,cId,cIp,cPort);
@@ -300,23 +319,32 @@ class tracker{
     }
 
   private:
-    void setInfo(message& package,str id,str ip,str port,str last,str keys){
-      /* it will setup all remote node info */
-      setRemoteInfo(id,ip,port);
+    void setInfo(socket& printer,message& package,str id,str ip,str port, \
+      str last,str keys){
+      /* it will setup all after node info */
+      setAftInfo(id,ip,port);
       setKeys(keys);
       this->amILast = last;
       package << "ok";
+
+      /* ----- Sebastian's printer section ----- */
+      // str _keys = ""; getKeys(_keys);
+      // vec info; info.resize(6);
+      // info[0] = "upgrade node"; info[1] = this->id; info[2] = this->aftId;
+      // info[3] = " ", info[4] = _keys << info[5] = " ";
+      // printerFunct(printer,info);
+      /* ----- End Sebastian's printer section ----- */
     }
 
     void getInfo(message& package){
       /* it will get this node and next node info for requester node */
-       package << this->id << this->remoteId << this->remoteIp \
-               << this->remotePort << this->amILast;
+       package << this->id << this->aftId << this->aftIp \
+               << this->aftPort << this->amILast;
     }
 
     void getPublInfo(message& package){
       /* it will get this node and this publisher info for requester node */
-      package << this->id << this->remoteIp << this->remotePort << this->publIp\
+      package << this->id << this->aftIp << this->aftPort << this->publIp\
               << this->publPort << this->amILast;
     }
 
@@ -334,8 +362,8 @@ class tracker{
       /* it will get all belonging keys for requester client */
       str ckeys = ""; // client keys
 
-      if((this->amILast == "true" && this->id > cId && this->remoteId == "none")\
-      || (this->amILast == "true" && this->id > cId && this->remoteId > cId)){
+      if((this->amILast == "true" && this->id > cId && this->aftId == "none")\
+      || (this->amILast == "true" && this->id > cId && this->aftId > cId)){
         _map::iterator first = this->keys.lower_bound(cId);
         _map::iterator last = this->keys.lower_bound(id);
         splitKeys(first,last,ckeys);
@@ -374,17 +402,17 @@ class tracker{
       /* it will disconnect this server */
       this->mustINotify = true;
       this->_exit = true;
-      this->cv.notify_one();
+      this->ntfcv.notify_one();
       package << "ok";
     }
 
     /* --------------------- publisher side ----------------- */
   private:
-    str publIp, publPort, publRemtIp, publRemPort;
+    str publIp, publPort;
     void publisher(socket& publ){
       /* it will publish to subscriber when this client disconnect */
       message messag;
-      str ip = this->remoteIp, port = this->remotePort;
+      str ip = this->aftIp, port = this->aftPort;
       if(this->amILast == "true"){
         ip = this->befIp;
         port = this->befPort;
@@ -445,6 +473,7 @@ class tracker{
       answer >> remtId >> remtNextIp >> remtNextPort >> remtPublIp \
              >> remtPublPort >> remtIsLast;
       aux.disconnect("tcp://"+ip+":"+port);
+      //bool thereWasUpgrade = false;
 
       for(auto& item: this->finTabl){
         str key = item.first;
@@ -457,17 +486,32 @@ class tracker{
             item.second[0] = remtPublIp;
             item.second[1] = remtPublPort;
             item.second[2] = remtId;
+            //thereWasUpgrade = true;
           }
         }
       }
 
       subs.disconnect("tcp://"+oldIp+":"+oldPort);
       subs.connect("tcp://"+remtPublIp+":"+remtPublPort);
+
+      // if(thereWasUpgrade){
+      //  /* ----- Sebastian's printer section ----- */
+      //  str idsFinTabl = "";
+      //  getIdsFinTabl(idsFinTabl);
+      //  vec info; info.resize(6)
+      //  info[0] = "upgrade node's finTbl"; info[1] = this->id; info[2] = " ";
+      //  info[3] = " "; info[4] = " "; info[5] = idsFinTabl;
+      //  printerFunct(printer,info);
+      //  /* ----- Sebastian's printer section ----- */
+      // }
+
     }
 
     void upgrFinTabl(socket& subs,str& id,str& ip,str& port){
       /* it will upgrade this finger table requested by new node into ring chord
-         (there is a problem here) */
+      */
+      //bool thereWasUpgrade = false;
+
       if(id > this->id){
         str oldIp = "", oldPort = "", oldId = "";
         for(auto& item : this->finTabl){
@@ -483,6 +527,7 @@ class tracker{
               item.second[1] = port;
               item.second[2] = id;
               subs.connect("tcp://"+ip+":"+port);
+              //thereWasUpgrade = true;
             }
           }
         }
@@ -491,12 +536,23 @@ class tracker{
           subs.disconnect("tcp://"+oldIp+":"+oldPort);
       }
 
+      // if(thereWasUpgrade){
+      //  /* ----- Sebastian's printer section ----- */
+      //  str idsFinTabl = "";
+      //  getIdsFinTabl(idsFinTabl);
+      //  vec info; info.resize(6)
+      //  info[0] = "upgrade node's finTbl"; info[1] = this->id; info[2] = " ";
+      //  info[3] = " "; info[4] = " "; info[5] = idsFinTabl;
+      //  printerFunct(printer,info);
+      //  /* ----- Sebastian's printer section ----- */
+      // }
+
        this->auxId = id;
-       this->auxIp = ip;
-       this->auxPort = port;
+       this->publIpAux = ip;
+       this->publPortAux = port;
        this->mustINotify = true;
        this->amIClient = false;
-       this->cv.notify_one();
+       this->ntfcv.notify_one();
     }
 
     void buildFinTabl(){
@@ -516,7 +572,7 @@ class tracker{
 
     void searchIntoRing(socket& aux,_map::iterator& item){
       /* it will search into chord ring for binding with */
-      str key = item->first, ip = this->remoteIp, port = this->remotePort;
+      str key = item->first, ip = this->aftIp, port = this->aftPort;
 
       while(true){
         message request, answer;
@@ -554,6 +610,12 @@ class tracker{
         searchIntoRing(aux,it);
     }
 
+    void getIdsFinTabl(str& idsFinTabl){
+      /* it will get ids logged into finger table */
+      for(auto& item : this->finTabl)
+        idsFinTabl += item.second[2] + " ";
+    }
+
     void conWithMyPubl(socket& subs){
       /* it will connect with this pusblisher */
       subs.connect("tcp://"+this->publIp+":"+this->publPort);
@@ -584,17 +646,11 @@ int main(int argc,const char **argv){
   socket serv(s_ctx,socket_type::rep), cli(c_ctx,socket_type::req)\
       ,printer(p_ctx,socket_type::req), aux(a_ctx,socket_type::req)\
       ,subs(su_ctx,socket_type::subscribe), publ(pu_ctx,socket_type::publish);
-  /* printing current keys domain */
-  // message request, answer;
-  // printer.connect("tcp://"+printerIp+":7777");
-  // request << id << ownFiles;
-  // printer.send(request);
-  // printer.receive(answer);
-  /* incoming node into chord ring */
-  tracker track(id,localIp,"5559",localIp,"5560",remoteIp,"5555",ownFiles);
+  //printer.connect("tcp://"+printerIp+":7777");
+  tracker track(id,localIp,"5559",localIp,"5560",aftIp,"5555",ownFiles);
   thread t0(&tracker::UpgrFinTablnotify, &track, ref(cli)),\
-         t1(&tracker::server, &track, ref(serv),ref(cli), ref(subs)),\
-         t2(&tracker::subscriber, &track, ref(subs), ref(aux));
+         t1(&tracker::server,&track,ref(serv),ref(cli),ref(subs),ref(printer)),\
+         t2(&tracker::subscriber,&track,ref(subs),ref(aux));
   track.client(cli,printer,publ);
   t0.join();
   t1.join();
